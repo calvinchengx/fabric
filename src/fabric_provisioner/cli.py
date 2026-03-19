@@ -17,6 +17,7 @@ from fabric_provisioner.ports import NoOpTicketCatalogPort, WebhookTicketCatalog
 from fabric_provisioner.service import (
     GroupRoleAssignment,
     ProvisionWorkspaceInput,
+    SpnRoleAssignment,
     provision_workspace,
 )
 
@@ -51,6 +52,14 @@ def create_workspace(
         str,
         typer.Option(help="Role applied to every --group-id (default Member)"),
     ] = "Member",
+    spn_id: Annotated[
+        list[str],
+        typer.Option(help="Entra service principal object ID (repeat for multiple SPNs)"),
+    ] = [],
+    spn_role: Annotated[
+        str,
+        typer.Option(help="Role applied to every --spn-id (default Member)"),
+    ] = "Member",
     ticket_id: Annotated[
         str | None,
         typer.Option(help="External ticket / catalog reference"),
@@ -65,15 +74,22 @@ def create_workspace(
     if group_role not in allowed:
         console.print(f"[red]group_role must be one of {sorted(allowed)}[/red]")
         raise typer.Exit(code=1)
+    if spn_role not in allowed:
+        console.print(f"[red]spn_role must be one of {sorted(allowed)}[/red]")
+        raise typer.Exit(code=1)
 
     settings = load_settings()
-    assignments = tuple(GroupRoleAssignment(object_id=g, role=group_role) for g in group_id)
+    group_assignments = tuple(
+        GroupRoleAssignment(object_id=g, role=group_role) for g in group_id
+    )
+    spn_assignments = tuple(SpnRoleAssignment(object_id=s, role=spn_role) for s in spn_id)
     req = ProvisionWorkspaceInput(
         display_name=display_name,
         description=description,
         capacity_id=capacity_id,
         domain_id=domain_id,
-        group_assignments=assignments,
+        group_assignments=group_assignments,
+        spn_assignments=spn_assignments,
         ticket_id=ticket_id,
         correlation_id=correlation_id,
     )

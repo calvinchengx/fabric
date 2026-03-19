@@ -11,6 +11,7 @@ from fabric_provisioner.ports import NoOpTicketCatalogPort, WebhookTicketCatalog
 from fabric_provisioner.service import (
     GroupRoleAssignment,
     ProvisionWorkspaceInput,
+    SpnRoleAssignment,
     provision_workspace,
 )
 
@@ -48,6 +49,9 @@ def create_workspace(body: ProvisionWorkspaceRequest) -> dict:
         domain_id=body.domain_id,
         group_assignments=tuple(
             GroupRoleAssignment(object_id=g.object_id, role=g.role) for g in body.group_assignments
+        ),
+        spn_assignments=tuple(
+            SpnRoleAssignment(object_id=s.object_id, role=s.role) for s in body.spn_assignments
         ),
         ticket_id=body.ticket_id,
         correlation_id=body.correlation_id,

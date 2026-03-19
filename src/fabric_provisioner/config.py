@@ -25,7 +25,10 @@ class Settings(BaseSettings):
 
     validate_group_ids_with_graph: bool = Field(
         default=False,
-        description="If true, verify each Entra group exists before assigning workspace roles.",
+        description=(
+            "If true, verify each Entra group and service principal (when assigned) exists "
+            "via Microsoft Graph before workspace role assignments."
+        ),
     )
 
     integration_webhook_url: str | None = Field(

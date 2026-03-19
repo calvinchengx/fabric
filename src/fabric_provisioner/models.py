@@ -18,11 +18,28 @@ class GroupRoleSpec(BaseModel):
         return v
 
 
+class ServicePrincipalRoleSpec(BaseModel):
+    object_id: str = Field(description="Microsoft Entra service principal object ID")
+    role: str = Field(description="Fabric workspace role")
+
+    @field_validator("role")
+    @classmethod
+    def role_must_be_valid(cls, v: str) -> str:
+        if v not in _WORKSPACE_ROLES:
+            msg = f"role must be one of {sorted(_WORKSPACE_ROLES)}"
+            raise ValueError(msg)
+        return v
+
+
 class ProvisionWorkspaceRequest(BaseModel):
     display_name: str = Field(max_length=256)
     description: str | None = Field(default=None, max_length=4000)
     capacity_id: str | None = None
     domain_id: str | None = None
     group_assignments: list[GroupRoleSpec] = Field(default_factory=list)
+    spn_assignments: list[ServicePrincipalRoleSpec] = Field(
+        default_factory=list,
+        description="Service principals to add as workspace role assignments (automation).",
+    )
     ticket_id: str | None = None
     correlation_id: str | None = None

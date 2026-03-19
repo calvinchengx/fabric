@@ -2,6 +2,8 @@
 
 This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** Microsoft Fabric in conjunction with this repo. It complements [ARCHITECTURE.md](ARCHITECTURE.md) (technical split between Entra and the thin provisioner).
 
+**Other docs:** [Architecture](ARCHITECTURE.md) · [Project README](../README.md).
+
 ## Governance (who decides access)
 
 ### Entra is the policy system of record
@@ -26,13 +28,13 @@ This document states **how we expect** the platform team and workspace owners to
 ### Running `fabric-provisioner`
 
 - **Who may invoke it:** only **approved automation** (CI/CD, scheduled job, internal API behind auth) or **named operators** with a ticket. Prefer **one provisioner SPN per environment** (e.g. dev / test / prod) with **separate** `AZURE_CLIENT_ID` / secret injection — not one mega-credential for everything.
-- **Change control:** workspace **creation** and **default group assignments** should tie to a **catalog or change record** (`ticket_id`, `correlation_id`) so operations can explain *why* a workspace exists.
+- **Change control:** workspace **creation** and **default assignments** (groups and any **SPN** principals added at create time) should tie to a **catalog or change record** (`ticket_id`, `correlation_id`) so operations can explain *why* a workspace exists.
 - **Environments:** non-prod and prod **Fabric capacities / domains** are separated where the business requires it; provisioner config (e.g. `capacity_id`) reflects that separation.
 
 ### Workspace lifecycle
 
-- **Create:** via this tool or an approved process that calls the same APIs; record **display name**, **owning team**, and **default groups** in your CMDB or service catalog if required.
-- **Modify access:** prefer **Entra group** changes; use API-only group assignment changes when automation must align a new workspace with a **frozen** default pattern.
+- **Create:** via this tool or an approved process that calls the same APIs; record **display name**, **owning team**, **default groups**, and any **workspace-level SPN** roles in your CMDB or service catalog if required.
+- **Modify access:** prefer **Entra group** changes for people; for **automation principals**, prefer **controlled** use of `spn_assignments` / `--spn-id` at create time or follow-up admin processes—avoid ad-hoc shared SPNs on production workspaces.
 - **Decommission:** disable or delete workspace per org process; **rotate or remove** SPN role assignments and connection credentials that pointed at that workspace.
 
 ### Audit vs execution identity (for investigators)
@@ -46,7 +48,7 @@ This document states **how we expect** the platform team and workspace owners to
 ### Entra app registrations used by this repo
 
 - **Dedicated app** for the provisioner (not shared with unrelated products) unless your security team explicitly approves reuse.
-- **Least privilege** on **Fabric** and **Graph**: grant only what Create Workspace, role assignment, and optional `Group.Read.All` (or narrower) validation require — per Microsoft Learn and your tenant’s admin consent process.
+- **Least privilege** on **Fabric** and **Graph**: grant only what Create Workspace, role assignment, and optional validation require — e.g. `Group.Read.All` for groups and **`Application.Read.All`** (or **`Directory.Read.All`**, per your standard) when using `GET /servicePrincipals/{id}` with `VALIDATE_GROUP_IDS_WITH_GRAPH=true` — per Microsoft Learn and admin consent.
 - **Credential type:** prefer **certificate** over client secret where your platform supports it; **rotate** on a schedule.
 
 ### Fabric tenant settings
@@ -73,12 +75,12 @@ This document states **how we expect** the platform team and workspace owners to
 
 ## Summary checklist
 
-| Area | Expectation |
-|------|-------------|
-| People access | Entra **groups** on workspaces; lifecycle in Entra |
-| Admin access | **Named** admins; break-glass rare and monitored |
-| Automation | **Dedicated SPNs**; secrets in **vault**; tenant settings **scoped** |
-| This app | **Least privilege**; audit fields; no secrets in git |
-| Audit | Distinguish **author** vs **run-as / connection** identity |
+| Area | Expectation | Commands / surfaces **in this repo** |
+|------|-------------|--------------------------------------|
+| People access | Entra **groups** on workspaces; lifecycle in Entra | **`fabric-provision create-workspace`** with **`--group-id`** / **`--group-role`**. For **automation principals**, **`--spn-id`** / **`--spn-role`** (or **`spn_assignments`** on **`POST /v1/workspaces`**). Day-to-day **group** membership is changed in **Entra**, not via this tool. |
+| Admin access | **Named** admins; break-glass rare and monitored | **None** — assign Fabric/tenant admins in **Entra** and the **Fabric / Microsoft 365 admin** experiences; this package does not model human admin roles. |
+| Automation | **Dedicated SPNs**; secrets in **vault**; tenant settings **scoped** | **`fabric-provision health`** (or equivalent token check) to validate the **provisioner SPN** before jobs. **`create-workspace`** / **`POST /v1/workspaces`** run as that identity. **Tenant developer settings** (which SPNs may use Fabric) are configured in the **admin portal**, not here. |
+| This app | **Least privilege**; audit fields; no secrets in git | **Permissions** are Entra app roles / admin consent (outside the repo). Use **`--ticket-id`** and **`--correlation-id`** on **`create-workspace`** (or the same fields on **`POST /v1/workspaces`**) so runs are traceable. |
+| Audit | Distinguish **author** vs **run-as / connection** identity | **Provisioner side:** stdout / JSONL audit lines; optional **`AUDIT_JSONL_PATH`**; **`fabric-provision audit-dump`** to stream a JSONL file. **Author vs run-as** for Fabric artifacts is explained in **Microsoft tenant audit / Purview** — not a command in this package. |
 
-For technical API details and repo layout, see [ARCHITECTURE.md](ARCHITECTURE.md).
+For technical API details and repo layout, see [ARCHITECTURE.md](ARCHITECTURE.md). For CLI discovery, run **`uv run fabric-provision --help`** (see [README.md](../README.md#cli)).

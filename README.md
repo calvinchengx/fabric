@@ -1,10 +1,10 @@
 # fabric-provisioner
 
-Thin **Python** layer for **Microsoft Fabric** workspace provisioning: create workspaces via the [Fabric Core REST API](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/create-workspace), assign **Entra security groups** with [workspace role assignments](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/add-workspace-role-assignment), emit **structured audit** lines, and optionally **POST** results to a webhook (ticket/catalog integration).
+Thin **Python** layer for **Microsoft Fabric** workspace provisioning: create workspaces via the [Fabric Core REST API](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/create-workspace), assign **Entra security groups** and optional **service principals** with [workspace role assignments](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/add-workspace-role-assignment), emit **structured audit** lines, and optionally **POST** results to a webhook (ticket/catalog integration).
 
 **Policy** (who should have access) belongs in **Entra** (groups, access packages, lifecycle). This app **applies** approved outcomes — it does not replace IAM governance.
 
-See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for principles and data flow, and **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** for how we expect to **govern**, **operate**, and **secure** Fabric and this provisioner.
+See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (design & APIs) and **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** (operations & security).
 
 ## Requirements
 
@@ -36,13 +36,25 @@ Environment variables (also loadable from `.env` in the working directory):
 | `GRAPH_API_SCOPE` | no | Default `https://graph.microsoft.com/.default` |
 | `FABRIC_API_BASE` | no | Default `https://api.fabric.microsoft.com/v1` |
 | `GRAPH_API_BASE` | no | Default `https://graph.microsoft.com/v1.0` |
-| `VALIDATE_GROUP_IDS_WITH_GRAPH` | no | If `true`, `GET /groups/{id}` before assigning roles |
+| `VALIDATE_GROUP_IDS_WITH_GRAPH` | no | If `true`, `GET /groups/{id}` and `GET /servicePrincipals/{id}` (for SPN assignments) before Fabric role calls |
 | `INTEGRATION_WEBHOOK_URL` | no | HTTPS URL for JSON POST after provision |
 | `AUDIT_JSONL_PATH` | no | Append one JSON audit record per line |
 
 Field names in code use lowercase aliases from pydantic-settings (e.g. `azure_tenant_id` reads `AZURE_TENANT_ID`).
 
+When **`INTEGRATION_WEBHOOK_URL`** is set, the provisioner **POST**s JSON after success: `workspace`, `group_assignments`, `spn_assignments`, `ticket_id`, `correlation_id`.
+
 ## CLI
+
+**Discover commands** (Typer): run **`uv run fabric-provision --help`** for subcommands, and **`uv run fabric-provision <command> --help`** for flags (e.g. `create-workspace --help`).
+
+| Command | What it does |
+|--------|----------------|
+| `health` | Acquire a Fabric API token (validates Entra app + env). |
+| `create-workspace` | Create a workspace; optional `--group-id` / `--group-role`, `--spn-id` / `--spn-role`, `--capacity-id`, `--domain-id`, `--ticket-id`, etc. |
+| `audit-dump` | Stream JSONL audit to stdout; `--path` or `AUDIT_JSONL_PATH`; optional `--tail N`. |
+
+Examples:
 
 ```bash
 uv run fabric-provision health
@@ -50,7 +62,14 @@ uv run fabric-provision create-workspace "Analytics — Finance" \
   --group-id <entra-group-object-id> \
   --group-role Member \
   --ticket-id CHG12345
+# Optional automation principal on the same workspace (Entra service principal object ID):
+uv run fabric-provision create-workspace "ETL — Prod" \
+  --spn-id <entra-spn-object-id> \
+  --spn-role Contributor \
+  --correlation-id req-etl-001
 ```
+
+**Traceability:** pass **`--ticket-id`** (change/catalog id, e.g. ServiceNow, BMC Helix, Jira) and/or **`--correlation-id`** (request/run id). Same fields exist on **`POST /v1/workspaces`**; the app does not validate tickets against external systems—it records them in audit output and webhooks.
 
 ## HTTP API
 
@@ -61,9 +80,11 @@ uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port 8080
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/healthz` | Liveness (`{"status": "ok"}`); does not call Fabric. |
-| `POST` | `/v1/workspaces` | Create workspace and apply group role assignments (same behavior as CLI). |
+| `POST` | `/v1/workspaces` | Create workspace and apply group and optional SPN role assignments (same behavior as CLI). |
 
-`POST /v1/workspaces` with JSON body:
+With the server running, interactive **OpenAPI** is at **`/docs`** (Swagger UI) and **`/redoc`**.
+
+`POST /v1/workspaces` with JSON body (`group_assignments` and `spn_assignments` default to empty; omit or use `[]` if unused):
 
 ```json
 {
@@ -74,6 +95,9 @@ uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port 8080
   "group_assignments": [
     { "object_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "role": "Member" }
   ],
+  "spn_assignments": [
+    { "object_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "role": "Contributor" }
+  ],
   "ticket_id": "CHG12345",
   "correlation_id": "req-abc"
 }
@@ -83,9 +107,9 @@ uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port 8080
 
 ### What this app logs (provisioner-only)
 
-Every successful **create workspace** / **group assignment** step emits:
+Every successful **create workspace**, **group role assignment**, or **SPN role assignment** step emits:
 
-- **One JSON object per line** on **stdout** (`event`, `ts`, `workspace_id`, `ticket_id`, etc.).
+- **One JSON object per line** on **stdout** (`event`, `ts`, `workspace_id`, `ticket_id`, etc.). Events include `workspace.created`, `workspace.group_assigned`, `workspace.spn_assigned`.
 - If **`AUDIT_JSONL_PATH`** is set, the **same** records are **appended** to that file (JSON Lines).
 
 **Extract / forward** for your SIEM or object storage:
@@ -98,6 +122,7 @@ uv run fabric-provision audit-dump --path ./var/audit.jsonl > export.jsonl
 uv run fabric-provision audit-dump --path ./var/audit.jsonl --tail 500
 # With AUDIT_JSONL_PATH in .env, path can be omitted:
 uv run fabric-provision audit-dump | jq -c 'select(.event=="workspace.created")'
+uv run fabric-provision audit-dump | jq -c 'select(.event=="workspace.spn_assigned")'
 ```
 
 ### Fabric-wide activity (not this repo)
@@ -117,7 +142,7 @@ Unit tests live under **`tests/`** and mock Fabric/token calls (`test_service.py
 
 ## Extending
 
-The library exposes `FabricClient.add_workspace_role_assignment` with a `principal_type` string. For automation SPNs on a workspace, Microsoft’s API expects a service principal principal type (see [Add Workspace Role Assignment](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/add-workspace-role-assignment)); add CLI/API fields only if your governance model needs it — prefer **groups** for humans and **scoped SPNs** for jobs.
+The library exposes `FabricClient.add_workspace_role_assignment` with a `principal_type` string (`Group`, `ServicePrincipal`, etc.; see [Add Workspace Role Assignment](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/add-workspace-role-assignment)). **CLI/API:** use `--spn-id` / `--spn-role` or `spn_assignments` in JSON. Prefer **groups** for people and **scoped SPNs** for automation.
 
 ## License
 

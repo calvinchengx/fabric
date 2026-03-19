@@ -28,3 +28,8 @@ class GraphClient:
         response = self._client.get(f"/groups/{group_object_id}")
         response.raise_for_status()
         return response.json()
+
+    def get_service_principal(self, object_id: str) -> dict[str, Any]:
+        response = self._client.get(f"/servicePrincipals/{object_id}")
+        response.raise_for_status()
+        return response.json()
