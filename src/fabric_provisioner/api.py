@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import cast
 
 from fastapi import FastAPI, HTTPException
 
 from fabric_provisioner.audit import AuditSink
 from fabric_provisioner.config import Settings, load_settings
-from fabric_provisioner.models import ProvisionWorkspaceRequest
+from fabric_provisioner.connections import (
+    ConnectionPrincipalGrant,
+    ConnectionRole,
+    CreateShareableSqlConnectionInput,
+    SqlBasicCredentials,
+    SqlServicePrincipalCredentials,
+    create_shareable_sql_connection,
+)
+from fabric_provisioner.models import CreateSqlConnectionRequest, ProvisionWorkspaceRequest
 from fabric_provisioner.ports import NoOpTicketCatalogPort, WebhookTicketCatalogPort
 from fabric_provisioner.service import (
     GroupRoleAssignment,
@@ -17,7 +26,7 @@ from fabric_provisioner.service import (
 
 app = FastAPI(
     title="fabric-provisioner",
-    description="Thin Fabric workspace provisioning API (client credentials).",
+    description="Fabric workspace and shareable SQL connection API (client credentials).",
     version="0.1.0",
 )
 
@@ -58,5 +67,54 @@ def create_workspace(body: ProvisionWorkspaceRequest) -> dict:
     )
     try:
         return provision_workspace(settings, req, port=port, audit=audit)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+
+@app.post("/v1/connections/sql")
+def create_sql_connection(body: CreateSqlConnectionRequest) -> dict:
+    """Create a shareable cloud SQL connection and optional User/Group/SPN connection roles."""
+    settings = get_settings()
+    port: NoOpTicketCatalogPort | WebhookTicketCatalogPort
+    if settings.integration_webhook_url:
+        port = WebhookTicketCatalogPort(settings.integration_webhook_url)
+    else:
+        port = NoOpTicketCatalogPort()
+    audit = AuditSink(settings.audit_jsonl_path)
+
+    if body.basic is not None:
+        creds: SqlBasicCredentials | SqlServicePrincipalCredentials = SqlBasicCredentials(
+            username=body.basic.username,
+            password=body.basic.password,
+        )
+    else:
+        assert body.service_principal is not None
+        creds = SqlServicePrincipalCredentials(
+            tenant_id=body.service_principal.tenant_id,
+            client_id=body.service_principal.client_id,
+            client_secret=body.service_principal.client_secret,
+        )
+    grants = tuple(
+        ConnectionPrincipalGrant(
+            object_id=g.object_id,
+            principal_type=g.principal_type,
+            role=cast(ConnectionRole, g.role),
+        )
+        for g in body.grants
+    )
+    req = CreateShareableSqlConnectionInput(
+        display_name=body.display_name,
+        server=body.server,
+        database=body.database,
+        credentials=creds,
+        grants=grants,
+        ticket_id=body.ticket_id,
+        correlation_id=body.correlation_id,
+        privacy_level=body.privacy_level,
+        allow_usage_in_user_controlled_code=body.allow_usage_in_user_controlled_code,
+        skip_test_connection=body.skip_test_connection,
+    )
+    try:
+        return create_shareable_sql_connection(settings, req, port=port, audit=audit)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=str(e)) from e

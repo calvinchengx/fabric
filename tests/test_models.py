@@ -1,7 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from fabric_provisioner.models import GroupRoleSpec, ServicePrincipalRoleSpec
+from fabric_provisioner.models import (
+    ConnectionGrantSpec,
+    CreateSqlConnectionRequest,
+    GroupRoleSpec,
+    ServicePrincipalRoleSpec,
+    SqlBasicCredentialBody,
+    SqlServicePrincipalCredentialBody,
+)
 
 
 def test_group_role_spec_accepts_member() -> None:
@@ -26,3 +33,42 @@ def test_spn_role_spec_rejects_invalid_role() -> None:
         ServicePrincipalRoleSpec(
             object_id="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", role="Owner"
         )
+
+
+def test_create_sql_connection_requires_one_credential_kind() -> None:
+    with pytest.raises(ValidationError):
+        CreateSqlConnectionRequest(
+            display_name="x",
+            server="s",
+            database="d",
+        )
+    with pytest.raises(ValidationError):
+        CreateSqlConnectionRequest(
+            display_name="x",
+            server="s",
+            database="d",
+            basic=SqlBasicCredentialBody(username="u", password="p"),
+            service_principal=SqlServicePrincipalCredentialBody(
+                tenant_id="t",
+                client_id="c",
+                client_secret="s",
+            ),
+        )
+
+
+def test_create_sql_connection_accepts_basic_and_grants() -> None:
+    m = CreateSqlConnectionRequest(
+        display_name="x",
+        server="srv",
+        database="db",
+        basic=SqlBasicCredentialBody(username="u", password="p"),
+        grants=[
+            ConnectionGrantSpec(
+                object_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                principal_type="User",
+                role="Owner",
+            )
+        ],
+    )
+    assert m.basic is not None
+    assert len(m.grants) == 1

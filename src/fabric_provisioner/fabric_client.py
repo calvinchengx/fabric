@@ -72,3 +72,25 @@ class FabricClient:
         if not response.content:
             return None
         return response.json()
+
+    def create_connection(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /connections (ShareableCloud, gateway, etc. — see Microsoft Fabric REST)."""
+        response = self._client.post("/connections", json=body)
+        response.raise_for_status()
+        return response.json()
+
+    def add_connection_role_assignment(
+        self,
+        *,
+        connection_id: str,
+        principal: dict[str, Any],
+        role: str,
+    ) -> dict[str, Any]:
+        """POST /connections/{id}/roleAssignments — User, Group, ServicePrincipal, …"""
+        payload = {"principal": principal, "role": role}
+        response = self._client.post(
+            f"/connections/{connection_id}/roleAssignments",
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()

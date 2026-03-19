@@ -1,7 +1,7 @@
 [project]
 name = "fabric-provisioner"
 version = "0.1.0"
-description = "Thin API/CLI layer for Fabric workspace provisioning, Entra group role assignments, and integration hooks."
+description = "Fabric workspace + shareable SQL connection provisioning (Core REST), audit, webhook hooks."
 authors = [{ name = "Calvin Cheng" }]
 readme = "README.md"
 license = "MIT"
