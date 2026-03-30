@@ -16,6 +16,22 @@ This is the **shortest path** from zero to a working **fabric-provisioner** inst
 | **Microsoft Entra app registration** | Client ID + client secret (or adapt the code for certificates). Used for **OAuth client credentials** only — no interactive login in this package. |
 | **Tenant configuration** | A **Fabric administrator** must allow your service principal to **use Fabric APIs** (and to **create workspaces** / **connections** if you plan to use those features). See [permissions.md](permissions.md) and **Tenant prerequisites** in [architecture.md](architecture.md#apis-in-use). |
 
+### Is the provisioner an Entra app registration?
+
+**The Python project is not registered** — it is just code you run. What **is** registered is the **Microsoft Entra application (app registration)** whose **client ID** and **secret** you put in **`.env`**. That registration represents the **provisioner’s identity** (a **service principal** in your tenant) when the tool uses **OAuth client credentials**.
+
+So in **plain language**: you are **not** turning this Git repo into an Entra object. But **yes** — for Identity and Fabric, **the thing that is allowed to automate work is an Entra app registration** (its service principal). People often say *“fabric-provisioner is our Entra application”* and mean **that registration**, not the Python package.
+
+**Where to register it** (your organization’s tenant only):
+
+1. **[Microsoft Entra admin center](https://entra.microsoft.com)** → **Applications** → **App registrations** → **New registration**  
+   — or **[Azure portal](https://portal.azure.com)** → **Microsoft Entra ID** → **App registrations** → **New registration**.
+2. Choose a name (for example `fabric-provisioner-prod`), account type (usually **single tenant**), then create the app.
+3. From **Overview**, copy the **Application (client) ID** → **`AZURE_CLIENT_ID`** and **Directory (tenant) ID** → **`AZURE_TENANT_ID`**.
+4. Under **Certificates & secrets**, create a **client secret** → **`AZURE_CLIENT_SECRET`** (store it in a vault for anything beyond local dev).
+
+Then your **Identity / IAM** team (or Entra admins) attach the **API permissions** and **admin consent** this app needs for Fabric (and optionally Graph), and a **Fabric administrator** allows this app’s **service principal** in **Fabric tenant settings**. Details: [permissions.md](permissions.md). Microsoft’s overview: [Register an application](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
 ---
 
 ## 1. Clone and install
@@ -38,11 +54,11 @@ Without **just:** `uv sync --all-groups`.
 cp .env.example .env
 ```
 
-Edit **`.env`** and set at least:
+Edit **`.env`** and set at least (all from the **same app registration** above):
 
-- **`AZURE_TENANT_ID`** — your Entra tenant ID  
-- **`AZURE_CLIENT_ID`** — the provisioner app’s client ID  
-- **`AZURE_CLIENT_SECRET`** — that app’s client secret  
+- **`AZURE_TENANT_ID`** — Directory (tenant) ID of your Entra tenant  
+- **`AZURE_CLIENT_ID`** — Application (client) ID of the provisioner app registration  
+- **`AZURE_CLIENT_SECRET`** — Client secret you created on that app registration  
 
 All optional variables are described in **`.env.example`** and the [configuration table in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#configuration).
 

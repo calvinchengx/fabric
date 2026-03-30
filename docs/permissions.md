@@ -94,6 +94,12 @@ Humans use **their** identity in Fabric (solid path inside **members**). The das
 
 ---
 
+## App registration (Entra)
+
+**fabric-provisioner** is a **process** that calls Microsoft APIs. The **identity** of that process is an **[Microsoft Entra ID app registration](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app)** in **your tenant**: registering the app creates a **service principal** that receives tokens when you supply **`AZURE_CLIENT_ID`** and **`AZURE_CLIENT_SECRET`**. So **operationally** you can describe the automation as **an Entra application** (the app registration); **technically** the repo is only a **client** that presents that app’s credentials. You create the registration in the **[Entra admin center](https://entra.microsoft.com)** (or **Azure portal** → **Microsoft Entra ID** → **App registrations**), not inside Fabric. Step-by-step and who usually provides IDs/secrets: [get-started.md](get-started.md#is-the-provisioner-an-entra-app-registration).
+
+---
+
 ## How this tool authenticates
 
 - The CLI and HTTP server use **OAuth 2.0 client credentials** only: the identity is always the **Entra application** configured as **`AZURE_CLIENT_ID`** (plus secret or certificate material your org injects at runtime).
