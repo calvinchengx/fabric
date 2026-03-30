@@ -11,10 +11,10 @@ Design and operations for **Fabric administrators** and this app live in **[`doc
 | Document | Description |
 |----------|-------------|
 | **[docs/README.md](docs/README.md)** | Index and scope |
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Entra vs Fabric, Fabric APIs, tenant prerequisites |
-| **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** | Roles, operations, security, checklists |
+| **[docs/architecture.md](docs/architecture.md)** | Entra vs Fabric, Fabric APIs, tenant prerequisites |
+| **[docs/governance.md](docs/governance.md)** | Roles, operations, security, checklists |
 
-**On GitHub:** open the [`docs/`](docs/) folder in the repo. GitHub shows **`docs/README.md`** under the file list (same behavior as the root `README.md`). Click any `.md` file to read it with Markdown rendering.
+**On GitHub:** open the [`docs/`](docs/) folder in the repo. GitHub shows **`docs/README.md`** under the file list (same behavior as the root **`README.md`**). Click any `.md` file to read it with Markdown rendering.
 
 **GitHub Pages (MkDocs site):** the repository includes [`mkdocs.yml`](mkdocs.yml) and [`.github/workflows/docs.yml`](.github/workflows/docs.yml). After you enable **Settings → Pages → Build and deployment → Source: GitHub Actions**, pushes to `main` (or `master`) that touch `docs/` or `mkdocs.yml` build and publish the site. The live URL is usually `https://<owner>.github.io/<repo>/` (also under **Settings → Pages**). Local preview:
 

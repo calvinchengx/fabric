@@ -51,6 +51,6 @@ markdown_extensions:
 
 nav:
   - Home: README.md
-  - Architecture: ARCHITECTURE.md
-  - Governance: GOVERNANCE.md
+  - Architecture: architecture.md
+  - Governance: governance.md
   - Project README: repository.md

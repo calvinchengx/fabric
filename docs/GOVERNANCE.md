@@ -1,10 +1,10 @@
 # Governance, operations, and security (Fabric)
 
-This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** **Microsoft Fabric** in conjunction with this repo. It complements [ARCHITECTURE.md](ARCHITECTURE.md) (Entra vs Fabric split and Fabric APIs).
+This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** **Microsoft Fabric** in conjunction with this repo. It complements [architecture.md](architecture.md) (Entra vs Fabric split and Fabric APIs).
 
 **Scope:** **Fabric administrators** (named people who can change **Fabric admin portal** tenant settings) and **workspace owners** are the human control plane; this tool runs as a **provisioner service principal** with least privilege. We do **not** document other Microsoft cloud products here.
 
-**Other docs:** [Documentation index](README.md) · [Architecture](ARCHITECTURE.md) · [Project README](repository.md).
+**Other docs:** [Documentation index](README.md) · [Architecture](architecture.md) · [Project README](repository.md).
 
 ## Governance (who decides access)
 
@@ -91,4 +91,4 @@ This document states **how we expect** the platform team and workspace owners to
 | This app | **Least privilege**; audit fields; no secrets in git | **Permissions** are Entra app roles / admin consent (outside the repo). Use **`--ticket-id`** and **`--correlation-id`** on `create-workspace` and `create-sql-connection` (or the matching API fields) so runs are traceable. |
 | Audit | Distinguish **author** vs **run-as / connection** identity | **Provisioner side:** stdout / JSONL audit lines; optional **`AUDIT_JSONL_PATH`**; **`fabric-provision audit-dump`** to stream a JSONL file. **Author vs run-as** for Fabric content is interpreted using **Microsoft Fabric / Power BI** and **Entra** audit and activity logs—not a command in this package. |
 
-For technical API details and repo layout, see [ARCHITECTURE.md](ARCHITECTURE.md). For CLI discovery, run **`uv run fabric-provision --help`** (see [CLI in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)).
+For technical API details and repo layout, see [architecture.md](architecture.md). For CLI discovery, run **`uv run fabric-provision --help`** (see [CLI in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)).

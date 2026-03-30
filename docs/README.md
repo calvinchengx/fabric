@@ -4,16 +4,16 @@ This folder describes how **Microsoft Fabric tenant administration** intersects 
 
 ## Reading this on GitHub
 
-- Navigate to **`docs/`** in the repository. GitHub displays this **`README.md`** automatically below the file list (the same pattern as the root **`README.md`**).
-- Open **[ARCHITECTURE.md](ARCHITECTURE.md)** or **[GOVERNANCE.md](GOVERNANCE.md)** for the full pages; GitHub renders Markdown in the file view.
+- Navigate to **`docs/`** in the repository. GitHub displays **`README.md`** (this file) below the file list—the same convention as the root **`README.md`**.
+- Open **[architecture.md](architecture.md)** or **[governance.md](governance.md)** for the full pages; GitHub renders Markdown in the file view.
 - Use the **Copy permalink** control on a file (or blame/history) when linking to a specific version of a paragraph from issues or PRs.
 
 This folder is plain Markdown in git—no build step required for it to be readable on GitHub.
 
 | Document | Contents |
 |----------|----------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Entra vs Fabric split, Fabric APIs used, tenant prerequisites **Fabric administrators** configure |
-| [GOVERNANCE.md](GOVERNANCE.md) | Roles, operations, security, and checklists for Fabric workspaces and connections |
+| [architecture.md](architecture.md) | Entra vs Fabric split, Fabric APIs used, tenant prerequisites **Fabric administrators** configure |
+| [governance.md](governance.md) | Roles, operations, security, and checklists for Fabric workspaces and connections |
 | [repository.md](repository.md) | Pointer to the root **README** (install, CLI, HTTP API) for GitHub Pages |
 
 **Out of scope here:** Purview, non-Fabric Microsoft APIs, and other products—unless a link is needed for general org audit strategy.

@@ -4,7 +4,7 @@ This repository documents how a **large organization** should split responsibili
 
 **Scope:** **Fabric administrator** concerns that matter here are **tenant settings** (who may use Fabric APIs, who may create workspaces, optional **admin API** access for service principals), **Entra app permissions** for the provisioner, and **operational** discipline. This doc does **not** cover non-Fabric products or their REST APIs.
 
-**Other docs:** [Documentation index](README.md) · [Governance](GOVERNANCE.md) · [Project README](repository.md).
+**Other docs:** [Documentation index](README.md) · [Governance](governance.md) · [Project README](repository.md).
 
 ## Principles
 
@@ -83,7 +83,7 @@ Tenant prerequisites (**Fabric administrators** configure these in the Fabric ad
 - Grant **least privilege**: Fabric / Graph permissions your org requires for workspace create, **connections** (`Connection.ReadWrite.All` or as approved), and optional group/SPN validation.
 - Log **who** triggered provisioning (service account vs pipeline identity) in your audit sink.
 
-For **governance, day-to-day operations, and security expectations** (no shared root, SPN lifecycle, audit vs execution identity, checklists), see **[GOVERNANCE.md](GOVERNANCE.md)**.
+For **governance, day-to-day operations, and security expectations** (no shared root, SPN lifecycle, audit vs execution identity, checklists), see **[governance.md](governance.md)**.
 
 ## Out of scope (by design)
 
@@ -99,6 +99,6 @@ For **governance, day-to-day operations, and security expectations** (no shared 
 - **HTTP:** `uv run uvicorn fabric_provisioner.api:app` — `POST /v1/workspaces`, `POST /v1/connections/sql`, `GET /healthz`; OpenAPI at `/docs` and `/redoc` while the server runs.
 - **Auth:** OAuth 2.0 client credentials in `auth.py` (no MSAL dependency — single token POST).
 - **Integration:** `WebhookTicketCatalogPort` POSTs JSON when `INTEGRATION_WEBHOOK_URL` is set; replace with your own `TicketCatalogPort` for queue-based systems.
-- **Audit:** stdout JSON lines (`workspace.*`, `connection.sql.created`, `connection.role_assigned`, …); optional `AUDIT_JSONL_PATH`; CLI **`audit-dump`** streams that file to stdout (`README.md` — Logs and extraction).
+- **Audit:** stdout JSON lines (`workspace.*`, `connection.sql.created`, `connection.role_assigned`, …); optional `AUDIT_JSONL_PATH`; CLI **`audit-dump`** streams that file to stdout (root **README** — Logs and extraction).
 
 See [repository.md](repository.md) (links to the root README) for environment variables and examples.

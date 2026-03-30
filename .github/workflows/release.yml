@@ -1,0 +1,66 @@
+# Tagged releases: v0.1.0, v1.2.3, etc.
+# Bump version in pyproject.toml, commit, then:
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Ruff
+        run: uv run ruff check src tests
+
+      - name: Pytest
+        run: uv run pytest
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
