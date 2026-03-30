@@ -117,7 +117,9 @@ uv run mkdocs build --strict  # stricter link checks (CI-friendly)
 
 **Nav** is defined in **[`mkdocs.yml`](mkdocs.yml)** (Home → Usage → Architecture → Governance → Project README). **Hands-on tool examples** live in **[`docs/usage.md`](docs/usage.md)**.
 
-CI deploys to **GitHub Pages** when **`docs/`** or **`mkdocs.yml`** changes on the default branch (see **[`.github/workflows/docs.yml`](.github/workflows/docs.yml)**). If links in **`docs/`** point outside that folder, use full **GitHub** URLs (see **`docs/repository.md`**) so **`mkdocs build --strict`** passes when you enable it in automation.
+CI deploys to **GitHub Pages** on pushes to **`main`** / **`master`** and via **`workflow_dispatch`** (see **[`.github/workflows/docs.yml`](.github/workflows/docs.yml)**). Docs deploy is **not** triggered by **`v*`** tags by default: the **`github-pages`** deployment environment often restricts deployable refs to the default branch only. If you see **“Tag … is not allowed to deploy … due to environment protection rules”**, either ignore it after removing tag triggers from **`docs.yml`** (current layout), or in GitHub go to **Settings → Environments → `github-pages` → Deployment branches and tags** and add a rule that allows your tags (for example pattern **`v*`**), then you may add **`tags: ["v*"]`** under **`on.push`** in **`docs.yml`** again.
+
+If links in **`docs/`** point outside that folder, use full **GitHub** URLs (see **`docs/repository.md`**) so **`mkdocs build --strict`** passes when you enable it in automation.
 
 ## CI and GitHub Releases
 

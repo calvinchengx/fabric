@@ -1,15 +1,20 @@
 # Build MkDocs site and deploy to GitHub Pages.
 # After merge: Repository → Settings → Pages → Build and deployment → Source: GitHub Actions.
 #
-# Triggers: default branch (any push), version tags (so releases always refresh the site), manual.
-# No path filter: tag pushes must not be skipped when the release commit only touches e.g. pyproject.toml.
+# Triggers: default branch only + manual. We intentionally do NOT trigger on version tags: the
+# `deploy-pages` job uses environment "github-pages", which often has deployment protection
+# rules allowing only `main` / `master`. Pushing `v*` then fails the deploy step with
+# "environment protection rules" unless you add tag rules under
+# Settings → Environments → github-pages → Deployment branches and tags.
+#
+# Releases: merge release commits to main first; the site updates on that push. To also deploy
+# on tags, widen the environment (e.g. allow "v*" tags) and add:  tags: ["v*"]  under `push:`.
 
 name: Deploy documentation
 
 on:
   push:
     branches: [main, master]
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
