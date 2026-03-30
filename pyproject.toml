@@ -30,6 +30,11 @@ packages = ["src/fabric_provisioner"]
 [tool.hatch.build.targets.sdist]
 include = ["src/fabric_provisioner", "README.md", "LICENSE", "docs", "mkdocs.yml"]
 
+[tool.uv]
+constraint-dependencies = [
+    "pygments>=2.20.0",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8",
