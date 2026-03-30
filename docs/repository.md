@@ -4,7 +4,9 @@ The full project documentation—**requirements**, **setup**, **configuration**,
 
 **[View README.md on GitHub](https://github.com/calvinchengx/fabric/blob/main/README.md)** (update the URL if your fork or default branch differs)
 
-Quick links into that file:
+**New here:** **[get-started.md](get-started.md)** — prerequisites, **`just sync`**, **`.env`**, **`just health`**. **Step-by-step examples:** **[usage.md](usage.md)** — **`just cli` / `just api`**, `curl`, audit. **Permissions:** **[permissions.md](permissions.md)**.
+
+Quick links into **`README.md`** on GitHub:
 
 - [Setup](https://github.com/calvinchengx/fabric/blob/main/README.md#setup)
 - [CLI](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)

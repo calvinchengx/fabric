@@ -11,6 +11,9 @@ Design and operations for **Fabric administrators** and this app live in **[`doc
 | Document | Description |
 |----------|-------------|
 | **[docs/README.md](docs/README.md)** | Index and scope |
+| **[docs/get-started.md](docs/get-started.md)** | **Get started** — install, `.env`, first `just health` |
+| **[docs/usage.md](docs/usage.md)** | **How to run** — CLI, HTTP, `curl`, audit examples |
+| **[docs/permissions.md](docs/permissions.md)** | **Permissions & least privilege** — client credentials, Fabric/Entra requirements |
 | **[docs/architecture.md](docs/architecture.md)** | Entra vs Fabric, Fabric APIs, tenant prerequisites |
 | **[docs/governance.md](docs/governance.md)** | Roles, operations, security, checklists |
 
@@ -21,6 +24,7 @@ Design and operations for **Fabric administrators** and this app live in **[`doc
 ```bash
 uv sync --group docs
 uv run mkdocs serve
+# or: just docs
 ```
 
 Set **`repo_url`** (and optional **`site_url`**) in [`mkdocs.yml`](mkdocs.yml) if your GitHub remote is not `calvinchengx/fabric`.
@@ -45,6 +49,8 @@ cp .env.example .env   # fill in secrets
 ```
 
 **Editors:** Point Python analysis at **`.venv`** (e.g. *Python: Select Interpreter*). The repo sets `[tool.pyright]` in `pyproject.toml` so Pylance/Pyright resolve third-party imports after `uv sync`.
+
+**Shorter commands (optional):** install **[just](https://github.com/casey/just)** and use **`just health`**, **`just docs`**, **`just api`**, etc. — see **`justfile`** and **[CONTRIBUTING.md](CONTRIBUTING.md#short-commands-with-just)**.
 
 ## Configuration
 

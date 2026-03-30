@@ -155,3 +155,50 @@ def provision_workspace(
     }
     port.notify_provisioned(payload)
     return workspace
+
+
+def update_workspace_role_assignment(
+    settings: Settings,
+    *,
+    workspace_id: str,
+    workspace_role_assignment_id: str,
+    role: str,
+    audit: AuditSink,
+    ticket_id: str | None = None,
+    correlation_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Change the Fabric workspace role for an existing role assignment.
+
+    Caller must be a workspace admin; `workspace_role_assignment_id` is the
+    assignment id returned by Fabric (not the Entra principal id).
+    """
+    fabric_token = acquire_client_credentials_token(
+        tenant_id=settings.azure_tenant_id,
+        client_id=settings.azure_client_id,
+        client_secret=settings.azure_client_secret,
+        scope=settings.fabric_api_scope,
+    )
+    with FabricClient(base_url=settings.fabric_api_base, access_token=fabric_token) as fabric:
+        result = fabric.update_workspace_role_assignment(
+            workspace_id=workspace_id,
+            workspace_role_assignment_id=workspace_role_assignment_id,
+            role=role,
+        )
+    audit.emit(
+        "workspace.role_assignment_updated",
+        workspace_id=workspace_id,
+        workspace_role_assignment_id=workspace_role_assignment_id,
+        role=role,
+        ticket_id=ticket_id,
+        correlation_id=correlation_id,
+    )
+    emit_stdout(
+        "workspace.role_assignment_updated",
+        workspace_id=workspace_id,
+        workspace_role_assignment_id=workspace_role_assignment_id,
+        role=role,
+        ticket_id=ticket_id,
+        correlation_id=correlation_id,
+    )
+    return result

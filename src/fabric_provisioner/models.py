@@ -33,6 +33,22 @@ class ServicePrincipalRoleSpec(BaseModel):
         return v
 
 
+class UpdateWorkspaceRoleAssignmentRequest(BaseModel):
+    """Body for PATCH workspace role assignment (Fabric Core API)."""
+
+    role: str = Field(description="Fabric workspace role")
+    ticket_id: str | None = None
+    correlation_id: str | None = None
+
+    @field_validator("role")
+    @classmethod
+    def role_must_be_valid(cls, v: str) -> str:
+        if v not in _WORKSPACE_ROLES:
+            msg = f"role must be one of {sorted(_WORKSPACE_ROLES)}"
+            raise ValueError(msg)
+        return v
+
+
 class ProvisionWorkspaceRequest(BaseModel):
     display_name: str = Field(max_length=256)
     description: str | None = Field(default=None, max_length=4000)

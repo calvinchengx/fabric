@@ -8,6 +8,7 @@ from fabric_provisioner.service import (
     ProvisionWorkspaceInput,
     SpnRoleAssignment,
     provision_workspace,
+    update_workspace_role_assignment,
 )
 
 
@@ -86,4 +87,40 @@ def test_provision_workspace_assigns_spns() -> None:
         principal_id="22222222-2222-2222-2222-222222222222",
         principal_type="ServicePrincipal",
         role="Contributor",
+    )
+
+
+def test_update_workspace_role_assignment_calls_fabric() -> None:
+    settings = Settings(
+        azure_tenant_id="t",
+        azure_client_id="c",
+        azure_client_secret="s",
+        validate_group_ids_with_graph=False,
+    )
+    fake_fabric = MagicMock()
+    fake_fabric.update_workspace_role_assignment.return_value = {
+        "id": "ra-1",
+        "role": "Viewer",
+    }
+    fake_fabric.__enter__ = MagicMock(return_value=fake_fabric)
+    fake_fabric.__exit__ = MagicMock(return_value=False)
+
+    with (
+        patch("fabric_provisioner.service.acquire_client_credentials_token", return_value="tok"),
+        patch("fabric_provisioner.service.FabricClient", return_value=fake_fabric),
+    ):
+        out = update_workspace_role_assignment(
+            settings,
+            workspace_id="ws-9",
+            workspace_role_assignment_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            role="Viewer",
+            audit=AuditSink(None),
+            ticket_id="CHG1",
+        )
+
+    assert out["role"] == "Viewer"
+    fake_fabric.update_workspace_role_assignment.assert_called_once_with(
+        workspace_id="ws-9",
+        workspace_role_assignment_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        role="Viewer",
     )

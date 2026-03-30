@@ -73,6 +73,25 @@ class FabricClient:
             return None
         return response.json()
 
+    def update_workspace_role_assignment(
+        self,
+        *,
+        workspace_id: str,
+        workspace_role_assignment_id: str,
+        role: WorkspaceRole,
+    ) -> dict[str, Any]:
+        """
+        PATCH an existing workspace role assignment (role only).
+
+        See https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/update-workspace-role-assignment
+        """
+        response = self._client.patch(
+            f"/workspaces/{workspace_id}/roleAssignments/{workspace_role_assignment_id}",
+            json={"role": role},
+        )
+        response.raise_for_status()
+        return response.json()
+
     def create_connection(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /connections (ShareableCloud, gateway, etc. — see Microsoft Fabric REST)."""
         response = self._client.post("/connections", json=body)

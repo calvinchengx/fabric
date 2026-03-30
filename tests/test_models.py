@@ -8,6 +8,7 @@ from fabric_provisioner.models import (
     ServicePrincipalRoleSpec,
     SqlBasicCredentialBody,
     SqlServicePrincipalCredentialBody,
+    UpdateWorkspaceRoleAssignmentRequest,
 )
 
 
@@ -54,6 +55,17 @@ def test_create_sql_connection_requires_one_credential_kind() -> None:
                 client_secret="s",
             ),
         )
+
+
+def test_update_workspace_role_request_accepts_contributor() -> None:
+    m = UpdateWorkspaceRoleAssignmentRequest(role="Contributor")
+    assert m.role == "Contributor"
+    assert m.ticket_id is None
+
+
+def test_update_workspace_role_request_rejects_invalid_role() -> None:
+    with pytest.raises(ValidationError):
+        UpdateWorkspaceRoleAssignmentRequest(role="Owner")
 
 
 def test_create_sql_connection_accepts_basic_and_grants() -> None:

@@ -15,13 +15,18 @@ from fabric_provisioner.connections import (
     SqlServicePrincipalCredentials,
     create_shareable_sql_connection,
 )
-from fabric_provisioner.models import CreateSqlConnectionRequest, ProvisionWorkspaceRequest
+from fabric_provisioner.models import (
+    CreateSqlConnectionRequest,
+    ProvisionWorkspaceRequest,
+    UpdateWorkspaceRoleAssignmentRequest,
+)
 from fabric_provisioner.ports import NoOpTicketCatalogPort, WebhookTicketCatalogPort
 from fabric_provisioner.service import (
     GroupRoleAssignment,
     ProvisionWorkspaceInput,
     SpnRoleAssignment,
     provision_workspace,
+    update_workspace_role_assignment,
 )
 
 app = FastAPI(
@@ -67,6 +72,29 @@ def create_workspace(body: ProvisionWorkspaceRequest) -> dict:
     )
     try:
         return provision_workspace(settings, req, port=port, audit=audit)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+
+@app.patch("/v1/workspaces/{workspace_id}/role-assignments/{assignment_id}")
+def patch_workspace_role_assignment(
+    workspace_id: str,
+    assignment_id: str,
+    body: UpdateWorkspaceRoleAssignmentRequest,
+) -> dict:
+    """Update a workspace role assignment (requires admin on the workspace)."""
+    settings = get_settings()
+    audit = AuditSink(settings.audit_jsonl_path)
+    try:
+        return update_workspace_role_assignment(
+            settings,
+            workspace_id=workspace_id,
+            workspace_role_assignment_id=assignment_id,
+            role=body.role,
+            audit=audit,
+            ticket_id=body.ticket_id,
+            correlation_id=body.correlation_id,
+        )
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=str(e)) from e
 

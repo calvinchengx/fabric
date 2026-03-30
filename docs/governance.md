@@ -1,10 +1,10 @@
 # Governance, operations, and security (Fabric)
 
-This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** **Microsoft Fabric** in conjunction with this repo. It complements [architecture.md](architecture.md) (Entra vs Fabric split and Fabric APIs).
+This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** **Microsoft Fabric** in conjunction with this repo. It complements [architecture.md](architecture.md) (Entra vs Fabric split and Fabric APIs) and [permissions.md](permissions.md) (Entra app vs Fabric portal requirements and least privilege).
 
 **Scope:** **Fabric administrators** (named people who can change **Fabric admin portal** tenant settings) and **workspace owners** are the human control plane; this tool runs as a **provisioner service principal** with least privilege. We do **not** document other Microsoft cloud products here.
 
-**Other docs:** [Documentation index](README.md) · [Architecture](architecture.md) · [Project README](repository.md).
+**Other docs:** [Documentation index](README.md) · [Get started](get-started.md) · [Usage / examples](usage.md) · [Architecture](architecture.md) · [Permissions & least privilege](permissions.md) · [Project README](repository.md).
 
 ## Governance (who decides access)
 
@@ -30,18 +30,18 @@ This document states **how we expect** the platform team and workspace owners to
 ### Running `fabric-provisioner`
 
 - **Who may invoke it:** only **approved automation** (CI/CD, scheduled job, internal API behind auth) or **named operators** with a ticket. Prefer **one provisioner SPN per environment** (e.g. dev / test / prod) with **separate** `AZURE_CLIENT_ID` / secret injection — not one mega-credential for everything.
-- **Change control:** workspace **creation**, connection **creation**, and default assignments (groups/users/SPNs as applicable) should tie to a **catalog or change record** (`ticket_id`, `correlation_id`) so operations can explain *why* a change exists.
+- **Change control:** workspace **creation**, connection **creation**, **workspace role assignment updates** (when used), and default assignments (groups/users/SPNs as applicable) should tie to a **catalog or change record** (`ticket_id`, `correlation_id`) so operations can explain *why* a change exists.
 - **Environments:** non-prod and prod **Fabric capacities / domains** are separated where the business requires it; provisioner config (e.g. `capacity_id`) reflects that separation.
 
 ### Workspace lifecycle
 
 - **Create:** via this tool or an approved process that calls the same APIs; record **display name**, **owning team**, **default groups**, and any **workspace-level SPN** roles in your CMDB or service catalog if required.
-- **Modify access:** prefer **Entra group** changes for people; for **automation principals**, prefer **controlled** use of `spn_assignments` / `--spn-id` at create time or follow-up admin processes—avoid ad-hoc shared SPNs on production workspaces.
+- **Modify access:** prefer **Entra group** changes for people (same group, different membership). To **change the Fabric workspace role** tied to an existing assignment (e.g. promote a group from Viewer to Member), use **`just cli update-workspace-role`** (or **`uv run fabric-provision update-workspace-role`**) or **`PATCH /v1/workspaces/{workspace_id}/role-assignments/{assignment_id}`** with the Fabric **role assignment UUID** (from add/list APIs—not the Entra object id). The provisioner identity must be a **workspace admin**; Microsoft does not allow demoting the **last** workspace admin via this API. For **automation principals**, prefer **controlled** use of `spn_assignments` / `--spn-id` at create time or the same PATCH flow when an assignment id is known—avoid ad-hoc shared SPNs on production workspaces.
 - **Decommission:** disable or delete workspace per org process; **rotate or remove** SPN role assignments and connection credentials that pointed at that workspace.
 
 ### Connection lifecycle
 
-- **Create:** use `create-sql-connection` (or `POST /v1/connections/sql`) with either SQL basic or SQL AAD SPN credentials and trace fields (`ticket_id`, `correlation_id`).
+- **Create:** use **`just cli create-sql-connection`** (or **`POST /v1/connections/sql`**) with either SQL basic or SQL AAD SPN credentials and trace fields (`ticket_id`, `correlation_id`).
 - **Assign access:** grant only the minimum connection role needed (`User`, `UserWithReshare`, `Owner`) to `User` / `Group` / `ServicePrincipal` principals.
 - **Rotate/retire:** rotate SQL credentials, remove stale connection grants, and delete unused connections per your standard change process.
 
@@ -71,7 +71,7 @@ This document states **how we expect** the platform team and workspace owners to
 
 ### Logging and monitoring
 
-- Enable **stdout / JSONL** audit fields from this app (`AUDIT_JSONL_PATH`, structured lines) and forward them to your **SIEM**. Use **`fabric-provision audit-dump`** to stream the JSONL file to stdout for one-off exports or pipelines (see [Logs and extraction in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#logs-and-extraction)).
+- Enable **stdout / JSONL** audit fields from this app (`AUDIT_JSONL_PATH`, structured lines) and forward them to your **SIEM**. Events include workspace lifecycle lines (`workspace.created`, `workspace.group_assigned`, `workspace.spn_assigned`, **`workspace.role_assignment_updated`**) and connection lines. Use **`just cli audit-dump`** (or **`uv run fabric-provision audit-dump`**) to stream the JSONL file to stdout for one-off exports or pipelines (see [Logs and extraction in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#logs-and-extraction)).
 - Record **correlation_id** and **ticket_id** on every provision so security and operations can trace **caller → change**.
 - **Tenant-wide Fabric / Power BI activity** beyond this provisioner (who used which workspace, admin operations, etc.) comes from **Microsoft’s** Fabric/Power BI and **Microsoft 365** audit and activity mechanisms—not from this package. Ingest those into your SIEM per your org’s standard; **Fabric administrators** usually coordinate which exports are enabled.
 - Monitor **Entra** sign-in and **Fabric/Power BI** audit exports per Microsoft documentation for your compliance regime.
@@ -85,10 +85,10 @@ This document states **how we expect** the platform team and workspace owners to
 
 | Area | Expectation | Commands / surfaces **in this repo** |
 |------|-------------|--------------------------------------|
-| People access | Entra **groups** on workspaces; lifecycle in Entra | **`fabric-provision create-workspace`** with **`--group-id`** / **`--group-role`**. For **automation principals**, **`--spn-id`** / **`--spn-role`** (or **`spn_assignments`** on **`POST /v1/workspaces`**). For **connection access**, use `create-sql-connection` grants (`--grant-user-id` / `--grant-group-id` / `--grant-spn-id`). Day-to-day group membership is changed in **Entra**, not via this tool. |
+| People access | Entra **groups** on workspaces; lifecycle in Entra | **`just cli create-workspace`** with **`--group-id`** / **`--group-role`**. To **change an existing workspace role** for a principal already on the workspace, **`just cli update-workspace-role`** (or **`PATCH /v1/workspaces/.../role-assignments/...`**) with Fabric **assignment id** and **`--role`**. For **automation principals**, **`--spn-id`** / **`--spn-role`** (or **`spn_assignments`** on **`POST /v1/workspaces`**). For **connection access**, use **`just cli create-sql-connection`** grants (`--grant-user-id` / `--grant-group-id` / `--grant-spn-id`). Day-to-day **group membership** is changed in **Entra**, not via this tool. |
 | Admin access | **Named** admins; break-glass rare and monitored | **None** — assign Fabric/tenant admins in **Entra** and the **Fabric / Microsoft 365 admin** experiences; this package does not model human admin roles. |
-| Automation | **Dedicated SPNs**; secrets in **vault**; tenant settings **scoped** | **`fabric-provision health`** (or equivalent token check) to validate the **provisioner SPN** before jobs. **`create-workspace`** / **`POST /v1/workspaces`** run as that identity. **Tenant developer settings** (which SPNs may use Fabric) are configured in the **admin portal**, not here. |
-| This app | **Least privilege**; audit fields; no secrets in git | **Permissions** are Entra app roles / admin consent (outside the repo). Use **`--ticket-id`** and **`--correlation-id`** on `create-workspace` and `create-sql-connection` (or the matching API fields) so runs are traceable. |
-| Audit | Distinguish **author** vs **run-as / connection** identity | **Provisioner side:** stdout / JSONL audit lines; optional **`AUDIT_JSONL_PATH`**; **`fabric-provision audit-dump`** to stream a JSONL file. **Author vs run-as** for Fabric content is interpreted using **Microsoft Fabric / Power BI** and **Entra** audit and activity logs—not a command in this package. |
+| Automation | **Dedicated SPNs**; secrets in **vault**; tenant settings **scoped** | **`just health`** (or equivalent token check) to validate the **provisioner SPN** before jobs. **`just cli create-workspace`** / **`POST /v1/workspaces`** run as that identity. **Tenant developer settings** (which SPNs may use Fabric) are configured in the **admin portal**, not here. |
+| This app | **Least privilege**; audit fields; no secrets in git | **Permissions** are Entra app roles / admin consent (outside the repo). Use **`--ticket-id`** and **`--correlation-id`** on **`just cli create-workspace`**, **`just cli update-workspace-role`**, and **`just cli create-sql-connection`** (or the matching API fields on **`POST /v1/workspaces`**, **`PATCH /v1/workspaces/.../role-assignments/...`**, **`POST /v1/connections/sql`**) so runs are traceable. |
+| Audit | Distinguish **author** vs **run-as / connection** identity | **Provisioner side:** stdout / JSONL audit lines; optional **`AUDIT_JSONL_PATH`**; **`just cli audit-dump`** to stream a JSONL file. **Author vs run-as** for Fabric content is interpreted using **Microsoft Fabric / Power BI** and **Entra** audit and activity logs—not a command in this package. |
 
-For technical API details and repo layout, see [architecture.md](architecture.md). For CLI discovery, run **`uv run fabric-provision --help`** (see [CLI in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)).
+For technical API details and repo layout, see [architecture.md](architecture.md). For CLI discovery, run **`just cli --help`** or **`just`** to list **`justfile`** recipes (without **just:** **`uv run fabric-provision --help`**; see [CLI in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli) and [usage.md](usage.md)).

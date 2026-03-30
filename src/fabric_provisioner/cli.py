@@ -28,6 +28,7 @@ from fabric_provisioner.service import (
     ProvisionWorkspaceInput,
     SpnRoleAssignment,
     provision_workspace,
+    update_workspace_role_assignment,
 )
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -114,6 +115,46 @@ def create_workspace(
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(code=1) from e
     console.print(JSON(json.dumps(workspace)))
+
+
+@app.command("update-workspace-role")
+def update_workspace_role(
+    workspace_id: str = typer.Argument(..., help="Fabric workspace UUID"),
+    assignment_id: str = typer.Argument(
+        ...,
+        help="Workspace role assignment UUID (from Fabric list/add response, not Entra object id)",
+    ),
+    role: str = typer.Option(..., help="New Fabric workspace role"),
+    ticket_id: Annotated[
+        str | None,
+        typer.Option(help="External ticket / catalog reference"),
+    ] = None,
+    correlation_id: Annotated[
+        str | None,
+        typer.Option(help="Correlation id for logs"),
+    ] = None,
+) -> None:
+    """PATCH an existing workspace role assignment (caller must be workspace admin)."""
+    allowed = {"Admin", "Member", "Contributor", "Viewer"}
+    if role not in allowed:
+        console.print(f"[red]role must be one of {sorted(allowed)}[/red]")
+        raise typer.Exit(code=1)
+    settings = load_settings()
+    audit = AuditSink(settings.audit_jsonl_path)
+    try:
+        result = update_workspace_role_assignment(
+            settings,
+            workspace_id=workspace_id,
+            workspace_role_assignment_id=assignment_id,
+            role=role,
+            audit=audit,
+            ticket_id=ticket_id,
+            correlation_id=correlation_id,
+        )
+    except Exception as e:  # noqa: BLE001
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    console.print(JSON(json.dumps(result)))
 
 
 @app.command("create-sql-connection")
