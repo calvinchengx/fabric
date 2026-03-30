@@ -1,15 +1,15 @@
 # Build MkDocs site and deploy to GitHub Pages.
 # After merge: Repository → Settings → Pages → Build and deployment → Source: GitHub Actions.
+#
+# Triggers: default branch (any push), version tags (so releases always refresh the site), manual.
+# No path filter: tag pushes must not be skipped when the release commit only touches e.g. pyproject.toml.
 
 name: Deploy documentation
 
 on:
   push:
     branches: [main, master]
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
-      - ".github/workflows/docs.yml"
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
