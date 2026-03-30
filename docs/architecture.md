@@ -95,7 +95,7 @@ For **required permissions**, **workspace Admin vs automation identity**, and **
 
 - **Package layout:** `src/fabric_provisioner/` — importable library plus thin surfaces.
 - **Tooling:** [uv](https://docs.astral.sh/uv/) + `pyproject.toml`; lock with `uv lock`; from the repo root **`just sync`** runs `uv sync --all-groups` (see **`justfile`** and [CONTRIBUTING.md](https://github.com/calvinchengx/fabric/blob/main/CONTRIBUTING.md#short-commands-with-just)).
-- **CLI:** **`just cli …`** forwards to **`fabric-provision`** — e.g. **`just health`**, **`just cli create-workspace …`**, **`just cli update-workspace-role …`**, **`just cli create-sql-connection …`**, **`just cli audit-dump`** (without **just:** `uv run fabric-provision …`).
+- **CLI:** **`just cli …`** forwards to **`fabric-provision`** — e.g. **`just health`**, **`just cli create-workspace …`**, **`just inventory-core`**, **`just cli audit-dump`**. **Without just:** **`uv run fabric-provision …`** from the repo root after **`uv sync`**.
 - **HTTP:** **`just api`** runs **`uvicorn`** on **127.0.0.1:8080** by default (**`just api PORT`** to change port). Endpoints: `POST /v1/workspaces`, `PATCH /v1/workspaces/{workspace_id}/role-assignments/{assignment_id}`, `POST /v1/connections/sql`, `GET /healthz`; OpenAPI at `/docs` and `/redoc` while the server runs.
 - **Auth:** OAuth 2.0 client credentials in `auth.py` (no MSAL dependency — single token POST).
 - **Integration:** `WebhookTicketCatalogPort` POSTs JSON when `INTEGRATION_WEBHOOK_URL` is set; replace with your own `TicketCatalogPort` for queue-based systems.

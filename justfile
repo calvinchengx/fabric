@@ -28,6 +28,10 @@ inventory-full *args:
 api port="8080":
     uv run uvicorn fabric_provisioner.api:app --host 127.0.0.1 --port {{port}}
 
+# HTTP API on all interfaces (containers / LAN): `just api-public 8080`
+api-public port="8080":
+    uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port {{port}}
+
 # --- Documentation ---
 docs:
     uv sync --group docs

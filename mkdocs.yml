@@ -1,5 +1,5 @@
 # MkDocs — https://www.mkdocs.org/
-# Local:  uv sync --group docs && uv run mkdocs serve
+# Local:  just docs   (or: uv sync --group docs && uv run mkdocs serve)
 # Deploy: GitHub Actions → Settings → Pages → Source: GitHub Actions
 
 site_name: fabric-provisioner

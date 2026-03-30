@@ -2,7 +2,7 @@
 
 This page is a **practical guide**: install, configure, and run the **CLI** and **HTTP API** with concrete examples. New to the project? Follow **[get-started.md](get-started.md)** first. For design and tenant policy, see [architecture.md](architecture.md), [permissions.md](permissions.md) (what Entra/Fabric must grant), and [governance.md](governance.md).
 
-**Commands:** examples below use **[just](https://github.com/casey/just)** recipes from the repo **`justfile`** (`just sync`, `just health`, `just cli …`, `just api`, `just docs`). Install **just** per **[CONTRIBUTING.md](https://github.com/calvinchengx/fabric/blob/main/CONTRIBUTING.md#short-commands-with-just)**. **Without just**, run the same flows with **`uv sync --all-groups`**, **`uv run fabric-provision …`**, and **`uv run uvicorn …`** (see the [root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)).
+**Commands:** examples use **[just](https://github.com/casey/just)** (`just sync`, `just health`, `just cli …`, `just api`, `just api-public`, `just inventory-core`, `just docs`, …). Install **just** per **[CONTRIBUTING.md](https://github.com/calvinchengx/fabric/blob/main/CONTRIBUTING.md#short-commands-with-just)**. **Without just:** **`uv sync --all-groups`**, then **`uv run fabric-provision …`** or **`uv run uvicorn fabric_provisioner.api:app …`** (see the [root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)).
 
 **Identity model:** the tool uses **OAuth 2.0 client credentials** (an Entra **app registration**). Every Fabric call runs as that application (your **provisioner** service principal), not as your personal user. Your org must allow that identity to use Fabric APIs and to perform the operations you need (workspace create, role assignments, connections, etc.).
 
@@ -37,7 +37,7 @@ Optional variables (defaults are usually fine) are listed in **`.env.example`** 
 just docs
 ```
 
-Usually **http://127.0.0.1:8000** (live reload). The recipe runs **`uv sync --group docs`** then **`mkdocs serve`**.
+Usually **http://127.0.0.1:8000** (live reload). **`just docs`** installs the docs dependency group and starts **MkDocs** (see **`justfile`**).
 
 ---
 
@@ -191,7 +191,7 @@ Start the HTTP API (default **127.0.0.1:8080**):
 just api
 ```
 
-Use **`just api 3000`** (or another port) to change the port. **`just api`** binds **`127.0.0.1`** only. For **`0.0.0.0`** (containers or LAN access), run **`uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port 8080`**.
+Use **`just api 3000`** (or another port) to change the port. **`just api`** binds **`127.0.0.1`** only. For all interfaces (**`0.0.0.0`**, e.g. containers or LAN), use **`just api-public`** or **`just api-public 9000`**.
 
 Interactive OpenAPI (Swagger) is at **`http://127.0.0.1:8080/docs`** (adjust host/port if you changed them). **`GET /healthz`** does not call Fabric.
 

@@ -13,9 +13,10 @@ Authoritative links are embedded in manifest output under `core.documentation` f
 ## How to run
 
 - **CLI** (after configuring `.env` like the rest of the tool):
-  - `uv run fabric-provisioner inventory core` — Core crawl only.
-  - `uv run fabric-provisioner inventory full` — Core plus admin placeholder / `errors` merge.
-  - **File output:** `-o` / `--output` writes compact JSON; `--gzip` compresses the file; `--no-stdout` skips printing (useful for large tenants). The repo **`justfile`** also defines **`inventory-core`** and **`inventory-full`** recipes.
+  - **`just inventory-core`** — Core crawl only (same as `just cli inventory core`).
+  - **`just inventory-full`** — Core plus admin placeholder / `errors` merge (`just cli inventory full`).
+  - **File output:** `-o` / `--output` writes compact JSON; `--gzip` compresses the file; **`--no-stdout`** skips printing (useful for large tenants). Example: **`just inventory-core -- --max-workspaces 1 -o ./manifest.json`** (use **`--`** before flags so **just** does not swallow them).
+  - **Without just:** from the repo root, **`uv run fabric-provision inventory core`** (or **`inventory full`**) after **`uv sync`**.
 - **HTTP** (when the API server is running):
   - `POST /v1/inventory/core` — body: optional filters (`include_items`, `workspace_ids`, `max_workspaces`, …). See `InventoryCoreRequest` in `models.py`.
   - `POST /v1/inventory/full` — same body; merges Phase B stub.

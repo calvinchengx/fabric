@@ -12,7 +12,7 @@ This is the **shortest path** from zero to a working **fabric-provisioner** inst
 |--------------|------|
 | **Python 3.11+** | The project targets 3.11+; 3.12/3.13 are fine. |
 | **[uv](https://docs.astral.sh/uv/)** | Installs the app and dev/docs dependencies into **`.venv`**. |
-| **[just](https://github.com/casey/just)** (recommended) | Short commands from **`justfile`**; optional — see [usage.md](usage.md) for **`uv run …`** equivalents. |
+| **[just](https://github.com/casey/just)** (recommended) | Primary **`justfile`** commands (`just sync`, `just health`, `just cli …`, etc.); see [usage.md](usage.md). **Without just**, use **`uv`** from the same directory (e.g. **`uv sync --all-groups`**, **`uv run fabric-provision …`**). |
 | **Microsoft Entra app registration** | Client ID + client secret (or adapt the code for certificates). Used for **OAuth client credentials** only — no interactive login in this package. |
 | **Tenant configuration** | A **Fabric administrator** must allow your service principal to **use Fabric APIs** (and to **create workspaces** / **connections** if you plan to use those features). See [permissions.md](permissions.md) and **Tenant prerequisites** in [architecture.md](architecture.md#apis-in-use). |
 
@@ -95,6 +95,6 @@ You should see an **ok** message. If you get an error, fix **`.env`**, app regis
 
 ## Troubleshooting (quick)
 
-- **`just` not found:** install [just](https://github.com/casey/just#installation) or use **`uv run fabric-provision …`** (see [usage.md](usage.md)).
+- **`just` not found:** install [just](https://github.com/casey/just#installation), or run **`uv sync --all-groups`** and **`uv run fabric-provision …`** from the repo root (see [usage.md](usage.md) and the root README).
 - **Token / auth errors on `just health`:** confirm secrets, that admin consent was granted for Fabric (and Graph if you validate IDs), and that the service principal is allowed to use Fabric APIs in the **admin portal**.
 - **“Insufficient permissions” on create workspace / connections:** compare your app’s permissions and portal toggles with each API’s **Permissions** on [Microsoft Learn](https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/create-workspace) and [permissions.md](permissions.md).
