@@ -22,9 +22,8 @@ Design and operations for **Fabric administrators** and this app live in **[`doc
 **GitHub Pages (MkDocs site):** the repository includes [`mkdocs.yml`](mkdocs.yml) and [`.github/workflows/docs.yml`](.github/workflows/docs.yml). After you enable **Settings → Pages → Build and deployment → Source: GitHub Actions**, pushes to `main` (or `master`) that touch `docs/` or `mkdocs.yml` build and publish the site. The live URL is usually `https://<owner>.github.io/<repo>/` (also under **Settings → Pages**). Local preview:
 
 ```bash
-uv sync --group docs
-uv run mkdocs serve
-# or: just docs
+just docs
+# or: uv sync --group docs && uv run mkdocs serve
 ```
 
 Set **`repo_url`** (and optional **`site_url`**) in [`mkdocs.yml`](mkdocs.yml) if your GitHub remote is not `calvinchengx/fabric`.
@@ -37,6 +36,7 @@ Set **`repo_url`** (and optional **`site_url`**) in [`mkdocs.yml`](mkdocs.yml) i
 
 - Python **3.11+**
 - [uv](https://docs.astral.sh/uv/)
+- [just](https://github.com/casey/just) (optional; short commands via **`justfile`** — see [CONTRIBUTING.md](CONTRIBUTING.md#short-commands-with-just))
 - An **Entra app registration** with client secret (or adapt `auth.py` for certificates)
 - Tenant settings allowing the identity to **create workspaces** and **connections** and call **Fabric APIs** (see [service principals and Fabric](https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-developer)); required scopes/permissions depend on your auth model and admin policy (for example `Connection.ReadWrite.All` for connection role APIs)
 
@@ -44,13 +44,15 @@ Set **`repo_url`** (and optional **`site_url`**) in [`mkdocs.yml`](mkdocs.yml) i
 
 ```bash
 cd fabric   # or your clone directory
-uv sync --all-groups
+just sync
 cp .env.example .env   # fill in secrets
 ```
 
-**Editors:** Point Python analysis at **`.venv`** (e.g. *Python: Select Interpreter*). The repo sets `[tool.pyright]` in `pyproject.toml` so Pylance/Pyright resolve third-party imports after `uv sync`.
+(`just sync` runs **`uv sync --all-groups`**. Without **just:** run that **`uv`** line instead.)
 
-**Shorter commands (optional):** install **[just](https://github.com/casey/just)** and use **`just health`**, **`just docs`**, **`just api`**, etc. — see **`justfile`** and **[CONTRIBUTING.md](CONTRIBUTING.md#short-commands-with-just)**.
+**Editors:** Point Python analysis at **`.venv`** (e.g. *Python: Select Interpreter*). The repo sets `[tool.pyright]` in `pyproject.toml` so Pylance/Pyright resolve third-party imports after sync.
+
+**Commands:** from the repo root, **[just](https://github.com/casey/just)** wraps **`uv run`** — **`just health`**, **`just cli create-workspace …`**, **`just api`**, **`just docs`**, **`just test`**, etc. List recipes with **`just`**. Install **just** per **[CONTRIBUTING.md](CONTRIBUTING.md#short-commands-with-just)**; full **`justfile`** is in repo root.
 
 ## Configuration
 
@@ -77,30 +79,31 @@ Optional **CLI-only** env vars for secrets (avoid argv): `FABRIC_SQL_CONNECTION_
 
 ## CLI
 
-**Discover commands** (Typer): run **`uv run fabric-provision --help`** for subcommands, and **`uv run fabric-provision <command> --help`** for flags (e.g. `create-workspace --help`).
+Subcommands are **`fabric-provision`** (Typer). With **[just](https://github.com/casey/just):** **`just cli …`** forwards arguments (e.g. **`just cli --help`**, **`just cli create-workspace --help`**). Without **just:** **`uv run fabric-provision …`**.
 
 | Command | What it does |
 |--------|----------------|
-| `health` | Acquire a Fabric API token (validates Entra app + env). |
+| `health` | Acquire a Fabric API token (validates Entra app + env). **`just health`** |
 | `create-workspace` | Create a workspace; optional `--group-id` / `--group-role`, `--spn-id` / `--spn-role`, `--capacity-id`, `--domain-id`, `--ticket-id`, etc. |
+| `update-workspace-role` | PATCH a workspace role assignment (Fabric assignment id + `--role`). |
 | `create-sql-connection` | [Shareable cloud SQL](https://learn.microsoft.com/en-us/rest/api/fabric/core/connections/create-connection) connection; `--server`, `--database`, SQL **basic** or **AAD SPN** auth to the data source; optional `--grant-user-id`, `--grant-group-id`, `--grant-spn-id` with connection roles `Owner` / `UserWithReshare` / `User`. |
 | `audit-dump` | Stream JSONL audit to stdout; `--path` or `AUDIT_JSONL_PATH`; optional `--tail N`. |
 
-Examples:
+Examples ( **`just cli …`** — same flags with **`uv run fabric-provision …`**):
 
 ```bash
-uv run fabric-provision health
-uv run fabric-provision create-workspace "Analytics — Finance" \
+just health
+just cli create-workspace "Analytics — Finance" \
   --group-id <entra-group-object-id> \
   --group-role Member \
   --ticket-id CHG12345
 # Optional automation principal on the same workspace (Entra service principal object ID):
-uv run fabric-provision create-workspace "ETL — Prod" \
+just cli create-workspace "ETL — Prod" \
   --spn-id <entra-spn-object-id> \
   --spn-role Contributor \
   --correlation-id req-etl-001
 # Shareable SQL connection (Fabric warehouse / SQL endpoint) + grant a group connection access:
-uv run fabric-provision create-sql-connection \
+just cli create-sql-connection \
   --server '<warehouse>.datawarehouse.pbidedicated.windows.net' \
   --database '<warehouse_name>' \
   --sql-username '<sql_user>' \
@@ -108,7 +111,7 @@ uv run fabric-provision create-sql-connection \
   --grant-group-role User \
   'Catalog — DW read'
 # Shareable SQL connection using AAD service principal credentials for SQL auth:
-uv run fabric-provision create-sql-connection \
+just cli create-sql-connection \
   --server '<warehouse>.datawarehouse.pbidedicated.windows.net' \
   --database '<warehouse_name>' \
   --sql-auth-tenant-id '<tenant-guid>' \
@@ -123,21 +126,24 @@ For safer secret handling with these SQL examples, prefer env vars
 `FABRIC_SQL_CONNECTION_PASSWORD` and `FABRIC_SQL_AUTH_CLIENT_SECRET`
 instead of passing secrets as CLI flags.
 
-**Traceability:** pass **`--ticket-id`** (change/catalog id, e.g. ServiceNow, BMC Helix, Jira) and/or **`--correlation-id`** (request/run id). The same fields exist on **`POST /v1/workspaces`** and **`POST /v1/connections/sql`**; the app does not validate tickets against external systems - it records them in audit output and webhooks.
+**Traceability:** pass **`--ticket-id`** (change/catalog id, e.g. ServiceNow, BMC Helix, Jira) and/or **`--correlation-id`** (request/run id). The same fields exist on **`POST /v1/workspaces`**, **`PATCH /v1/workspaces/.../role-assignments/...`**, and **`POST /v1/connections/sql`**; the app does not validate tickets against external systems - it records them in audit output and webhooks.
 
 ## HTTP API
 
 ```bash
-uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port 8080
+just api
+# default: http://127.0.0.1:8080 — other port: just api 3000
+# for all interfaces (e.g. containers): uv run uvicorn fabric_provisioner.api:app --host 0.0.0.0 --port 8080
 ```
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/healthz` | Liveness (`{"status": "ok"}`); does not call Fabric. |
 | `POST` | `/v1/workspaces` | Create workspace and apply group and optional SPN role assignments (same behavior as CLI). |
+| `PATCH` | `/v1/workspaces/{workspace_id}/role-assignments/{assignment_id}` | Update an existing workspace role assignment (`role` in JSON body). |
 | `POST` | `/v1/connections/sql` | Create shareable SQL connection + optional connection role grants (JSON body; see OpenAPI `/docs`). |
 
-With the server running, interactive **OpenAPI** is at **`/docs`** (Swagger UI) and **`/redoc`**.
+With the server running, interactive **OpenAPI** is at **`http://127.0.0.1:8080/docs`** (Swagger UI) and **`/redoc`** (adjust host/port if needed).
 
 `POST /v1/workspaces` with JSON body (`group_assignments` and `spn_assignments` default to empty; omit or use `[]` if unused):
 
@@ -198,11 +204,11 @@ Every successful **workspace create/role assignment** and **SQL connection creat
 - **VM / cron:** set `AUDIT_JSONL_PATH` and **tail** or **copy** the file on a schedule, or stream it:
 
 ```bash
-uv run fabric-provision audit-dump --path ./var/audit.jsonl > export.jsonl
-uv run fabric-provision audit-dump --path ./var/audit.jsonl --tail 500
+just cli audit-dump --path ./var/audit.jsonl > export.jsonl
+just cli audit-dump --path ./var/audit.jsonl --tail 500
 # With AUDIT_JSONL_PATH in .env, path can be omitted:
-uv run fabric-provision audit-dump | jq -c 'select(.event=="workspace.created")'
-uv run fabric-provision audit-dump | jq -c 'select(.event=="workspace.spn_assigned")'
+just cli audit-dump | jq -c 'select(.event=="workspace.created")'
+just cli audit-dump | jq -c 'select(.event=="workspace.spn_assigned")'
 ```
 
 ### Fabric-wide activity (not this repo)
@@ -212,10 +218,11 @@ uv run fabric-provision audit-dump | jq -c 'select(.event=="workspace.spn_assign
 ## Tests
 
 ```bash
-uv run pytest
+just test
+just lint
+# coverage / html report (no just recipe yet):
 uv run pytest --cov=fabric_provisioner --cov-report=term-missing
 uv run pytest --cov=fabric_provisioner --cov-report=html   # open htmlcov/index.html
-uv run ruff check src tests
 ```
 
 Unit tests live under **`tests/`**: workspace flow (`test_service.py`), SQL connection flow (`test_connections.py`), Pydantic models (`test_models.py`). The **CLI** and **FastAPI** layers are not integration-tested; use the commands above for line coverage.
