@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     azure_tenant_id: str = Field(description="Microsoft Entra tenant ID")
@@ -42,6 +43,28 @@ class Settings(BaseSettings):
         default=None,
         description="If set, append one JSON object per line for audit events.",
     )
+
+    inventory_enabled: bool = Field(
+        default=True,
+        alias="FABRIC_INVENTORY_ENABLED",
+        description="If false, inventory CLI subcommands and HTTP routes are disabled.",
+    )
+    inventory_workspace_allowlist: str | None = Field(
+        default=None,
+        alias="FABRIC_INVENTORY_WORKSPACE_ALLOWLIST",
+        description=(
+            "Optional comma-separated Fabric workspace UUIDs. When set, inventory may only "
+            "crawl workspaces in this set (intersected with request/CLI filters)."
+        ),
+    )
+
+    def parsed_inventory_workspace_allowlist(self) -> frozenset[str] | None:
+        """Non-empty frozenset of workspace IDs from ``inventory_workspace_allowlist``, or None."""
+        raw = self.inventory_workspace_allowlist
+        if raw is None or not raw.strip():
+            return None
+        ids = frozenset(p.strip() for p in raw.split(",") if p.strip())
+        return ids if ids else None
 
 
 def load_settings() -> Settings:

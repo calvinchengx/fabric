@@ -5,7 +5,7 @@ import os
 import sys
 from collections import deque
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 
 import typer
 from rich.console import Console
@@ -22,6 +22,13 @@ from fabric_provisioner.connections import (
     SqlServicePrincipalCredentials,
     create_shareable_sql_connection,
 )
+from fabric_provisioner.inventory.core_collect import (
+    CoreInventoryOptions,
+    InventoryDisabledError,
+    run_core_manifest_only,
+    run_full_inventory_pipeline,
+)
+from fabric_provisioner.inventory.output import write_manifest_json
 from fabric_provisioner.ports import NoOpTicketCatalogPort, WebhookTicketCatalogPort
 from fabric_provisioner.service import (
     GroupRoleAssignment,
@@ -32,6 +39,9 @@ from fabric_provisioner.service import (
 )
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+inventory_app = typer.Typer(
+    help="Tenant manifest (v1): Fabric Core inventory + admin/scanner placeholder.",
+)
 console = Console()
 
 
@@ -323,6 +333,253 @@ def create_sql_connection(
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(code=1) from e
     console.print(JSON(json.dumps(connection)))
+
+
+def _emit_inventory_manifest(
+    manifest: dict[str, Any],
+    *,
+    output: Path | None,
+    gzip_output: bool,
+    no_stdout: bool,
+) -> None:
+    if output is not None:
+        write_manifest_json(output, manifest, gzip_compress=gzip_output)
+    if not no_stdout:
+        console.print(JSON(json.dumps(manifest)))
+
+
+def _inventory_options_from_cli(
+    *,
+    no_items: bool,
+    no_role_assignments: bool,
+    workspace_id: list[str],
+    name_prefix: str | None,
+    capacity_id: str | None,
+    domain_id: str | None,
+    max_workspaces: int | None,
+    roles: str | None,
+    prefer_workspace_endpoints: bool,
+    no_item_recursive: bool,
+) -> CoreInventoryOptions:
+    return CoreInventoryOptions(
+        include_items=not no_items,
+        include_role_assignments=not no_role_assignments,
+        workspace_ids=frozenset(workspace_id) if workspace_id else None,
+        name_prefix=name_prefix,
+        capacity_id=capacity_id,
+        domain_id=domain_id,
+        max_workspaces=max_workspaces,
+        roles=roles,
+        prefer_workspace_specific_endpoints=prefer_workspace_endpoints,
+        item_recursive=not no_item_recursive,
+    )
+
+
+@inventory_app.command("core")
+def inventory_core(
+    no_items: Annotated[
+        bool,
+        typer.Option("--no-items", help="Skip listing items per workspace"),
+    ] = False,
+    no_role_assignments: Annotated[
+        bool,
+        typer.Option("--no-role-assignments", help="Skip workspace role assignments"),
+    ] = False,
+    workspace_id: Annotated[
+        list[str],
+        typer.Option("--workspace-id", help="Limit to these workspace UUIDs (repeatable)"),
+    ] = [],
+    name_prefix: Annotated[
+        str | None,
+        typer.Option(help="Only workspaces whose display name starts with this prefix"),
+    ] = None,
+    capacity_id: Annotated[
+        str | None,
+        typer.Option(help="Only workspaces with this capacity UUID"),
+    ] = None,
+    domain_id: Annotated[
+        str | None,
+        typer.Option(help="Only workspaces with this domain UUID"),
+    ] = None,
+    max_workspaces: Annotated[
+        int | None,
+        typer.Option(help="Stop after this many matching workspaces (safety cap)"),
+    ] = None,
+    roles: Annotated[
+        str | None,
+        typer.Option(
+            help="Fabric list-workspaces roles filter (comma-separated, e.g. Admin,Member)",
+        ),
+    ] = None,
+    prefer_workspace_endpoints: Annotated[
+        bool,
+        typer.Option(
+            "--prefer-workspace-endpoints",
+            help="Request workspace-specific API endpoints in list workspaces",
+        ),
+    ] = False,
+    no_item_recursive: Annotated[
+        bool,
+        typer.Option(
+            "--no-item-recursive",
+            help="List items with recursive=false (direct children only)",
+        ),
+    ] = False,
+    ticket_id: Annotated[
+        str | None,
+        typer.Option(help="External ticket / catalog reference"),
+    ] = None,
+    correlation_id: Annotated[
+        str | None,
+        typer.Option(help="Correlation id for logs"),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "-o",
+            "--output",
+            help="Write manifest JSON to this path (compact UTF-8)",
+        ),
+    ] = None,
+    gzip_output: Annotated[
+        bool,
+        typer.Option("--gzip", help="Gzip the output file (requires --output)"),
+    ] = False,
+    no_stdout: Annotated[
+        bool,
+        typer.Option(
+            "--no-stdout",
+            help="Do not print JSON to stdout (use with --output for large manifests)",
+        ),
+    ] = False,
+) -> None:
+    """Build manifest v1 JSON (Core section only; not Microsoft Scanner)."""
+    if gzip_output and output is None:
+        console.print("[red]--gzip requires --output[/red]")
+        raise typer.Exit(code=1)
+    if no_stdout and output is None:
+        console.print("[red]--no-stdout requires --output[/red]")
+        raise typer.Exit(code=1)
+    settings = load_settings()
+    audit = AuditSink(settings.audit_jsonl_path)
+    opts = _inventory_options_from_cli(
+        no_items=no_items,
+        no_role_assignments=no_role_assignments,
+        workspace_id=workspace_id,
+        name_prefix=name_prefix,
+        capacity_id=capacity_id,
+        domain_id=domain_id,
+        max_workspaces=max_workspaces,
+        roles=roles,
+        prefer_workspace_endpoints=prefer_workspace_endpoints,
+        no_item_recursive=no_item_recursive,
+    )
+    try:
+        manifest = run_core_manifest_only(
+            settings,
+            options=opts,
+            audit=audit,
+            ticket_id=ticket_id,
+            correlation_id=correlation_id,
+        )
+    except InventoryDisabledError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=2) from e
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    except Exception as e:  # noqa: BLE001
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    _emit_inventory_manifest(
+        manifest,
+        output=output,
+        gzip_output=gzip_output,
+        no_stdout=no_stdout,
+    )
+
+
+@inventory_app.command("full")
+def inventory_full(
+    no_items: Annotated[bool, typer.Option("--no-items")] = False,
+    no_role_assignments: Annotated[bool, typer.Option("--no-role-assignments")] = False,
+    workspace_id: Annotated[
+        list[str],
+        typer.Option("--workspace-id"),
+    ] = [],
+    name_prefix: Annotated[str | None, typer.Option()] = None,
+    capacity_id: Annotated[str | None, typer.Option()] = None,
+    domain_id: Annotated[str | None, typer.Option()] = None,
+    max_workspaces: Annotated[int | None, typer.Option()] = None,
+    roles: Annotated[str | None, typer.Option()] = None,
+    prefer_workspace_endpoints: Annotated[
+        bool,
+        typer.Option("--prefer-workspace-endpoints"),
+    ] = False,
+    no_item_recursive: Annotated[bool, typer.Option("--no-item-recursive")] = False,
+    ticket_id: Annotated[str | None, typer.Option()] = None,
+    correlation_id: Annotated[str | None, typer.Option()] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("-o", "--output", help="Write manifest JSON to this path (compact UTF-8)"),
+    ] = None,
+    gzip_output: Annotated[
+        bool,
+        typer.Option("--gzip", help="Gzip the output file (requires --output)"),
+    ] = False,
+    no_stdout: Annotated[
+        bool,
+        typer.Option("--no-stdout", help="Do not print JSON to stdout (requires --output)"),
+    ] = False,
+) -> None:
+    """Core manifest + admin/scanner section (Phase B stub records an error in ``errors``)."""
+    if gzip_output and output is None:
+        console.print("[red]--gzip requires --output[/red]")
+        raise typer.Exit(code=1)
+    if no_stdout and output is None:
+        console.print("[red]--no-stdout requires --output[/red]")
+        raise typer.Exit(code=1)
+    settings = load_settings()
+    audit = AuditSink(settings.audit_jsonl_path)
+    opts = _inventory_options_from_cli(
+        no_items=no_items,
+        no_role_assignments=no_role_assignments,
+        workspace_id=workspace_id,
+        name_prefix=name_prefix,
+        capacity_id=capacity_id,
+        domain_id=domain_id,
+        max_workspaces=max_workspaces,
+        roles=roles,
+        prefer_workspace_endpoints=prefer_workspace_endpoints,
+        no_item_recursive=no_item_recursive,
+    )
+    try:
+        manifest = run_full_inventory_pipeline(
+            settings,
+            core_options=opts,
+            audit=audit,
+            ticket_id=ticket_id,
+            correlation_id=correlation_id,
+        )
+    except InventoryDisabledError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=2) from e
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    except Exception as e:  # noqa: BLE001
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1) from e
+    _emit_inventory_manifest(
+        manifest,
+        output=output,
+        gzip_output=gzip_output,
+        no_stdout=no_stdout,
+    )
+
+
+
+app.add_typer(inventory_app, name="inventory")
 
 
 @app.command("audit-dump")

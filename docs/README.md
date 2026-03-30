@@ -16,6 +16,7 @@ This folder is plain Markdown in git—no build step required for it to be reada
 |----------|----------|
 | [**get-started.md**](get-started.md) | **Get started** — prerequisites, `just sync`, **`.env`**, **`just health`**, next steps |
 | [**usage.md**](usage.md) | **How to run the tool** — **`just`**-first setup, CLI, HTTP, **`mkdocs`**, audit |
+| [**inventory.md**](inventory.md) | **Tenant manifest v1** — Fabric Core crawl (workspaces / items / role assignments), CLI and HTTP, Phase B admin stub |
 | [**permissions.md**](permissions.md) | **Entra + Fabric permissions**, **Mermaid diagrams** (gates, flows, identity split), least-privilege patterns |
 | [architecture.md](architecture.md) | Entra vs Fabric split, Fabric APIs used (workspace create, **update workspace role assignment**, connections), tenant prerequisites **Fabric administrators** configure |
 | [governance.md](governance.md) | Roles, operations, security, and checklists for Fabric workspaces and connections |

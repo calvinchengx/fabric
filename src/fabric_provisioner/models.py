@@ -116,3 +116,23 @@ class CreateSqlConnectionRequest(BaseModel):
             msg = "Provide exactly one of `basic` or `service_principal` credential objects"
             raise ValueError(msg)
         return self
+
+
+class InventoryCoreRequest(BaseModel):
+    """POST /v1/inventory/core — Fabric Core manifest crawl options."""
+
+    include_items: bool = True
+    include_role_assignments: bool = True
+    workspace_ids: list[str] = Field(default_factory=list)
+    name_prefix: str | None = None
+    capacity_id: str | None = None
+    domain_id: str | None = None
+    max_workspaces: int | None = Field(default=None, ge=1)
+    roles: str | None = Field(
+        default=None,
+        description="Optional Fabric roles filter (comma-separated, e.g. Admin,Member).",
+    )
+    prefer_workspace_specific_endpoints: bool = False
+    item_recursive: bool = True
+    ticket_id: str | None = None
+    correlation_id: str | None = None

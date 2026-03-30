@@ -15,8 +15,15 @@ from fabric_provisioner.connections import (
     SqlServicePrincipalCredentials,
     create_shareable_sql_connection,
 )
+from fabric_provisioner.inventory.core_collect import (
+    CoreInventoryOptions,
+    InventoryDisabledError,
+    run_core_manifest_only,
+    run_full_inventory_pipeline,
+)
 from fabric_provisioner.models import (
     CreateSqlConnectionRequest,
+    InventoryCoreRequest,
     ProvisionWorkspaceRequest,
     UpdateWorkspaceRoleAssignmentRequest,
 )
@@ -31,9 +38,27 @@ from fabric_provisioner.service import (
 
 app = FastAPI(
     title="fabric-provisioner",
-    description="Fabric workspace and shareable SQL connection API (client credentials).",
+    description=(
+        "Fabric workspace and shareable SQL connection API (client credentials); "
+        "optional Fabric Core tenant inventory (manifest v1)."
+    ),
     version="0.1.0",
 )
+
+
+def _inventory_options_from_body(body: InventoryCoreRequest) -> CoreInventoryOptions:
+    return CoreInventoryOptions(
+        include_items=body.include_items,
+        include_role_assignments=body.include_role_assignments,
+        workspace_ids=frozenset(body.workspace_ids) if body.workspace_ids else None,
+        name_prefix=body.name_prefix,
+        capacity_id=body.capacity_id,
+        domain_id=body.domain_id,
+        max_workspaces=body.max_workspaces,
+        roles=body.roles,
+        prefer_workspace_specific_endpoints=body.prefer_workspace_specific_endpoints,
+        item_recursive=body.item_recursive,
+    )
 
 
 @lru_cache
@@ -72,6 +97,48 @@ def create_workspace(body: ProvisionWorkspaceRequest) -> dict:
     )
     try:
         return provision_workspace(settings, req, port=port, audit=audit)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+
+@app.post("/v1/inventory/core")
+def post_inventory_core(body: InventoryCoreRequest) -> dict:
+    """Fabric Core inventory only (manifest v1 ``core`` section + shell metadata)."""
+    settings = get_settings()
+    audit = AuditSink(settings.audit_jsonl_path)
+    try:
+        return run_core_manifest_only(
+            settings,
+            options=_inventory_options_from_body(body),
+            audit=audit,
+            ticket_id=body.ticket_id,
+            correlation_id=body.correlation_id,
+        )
+    except InventoryDisabledError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+
+@app.post("/v1/inventory/full")
+def post_inventory_full(body: InventoryCoreRequest) -> dict:
+    """Core crawl plus admin/scanner placeholder (Phase B); stub error merges into ``errors``."""
+    settings = get_settings()
+    audit = AuditSink(settings.audit_jsonl_path)
+    try:
+        return run_full_inventory_pipeline(
+            settings,
+            core_options=_inventory_options_from_body(body),
+            audit=audit,
+            ticket_id=body.ticket_id,
+            correlation_id=body.correlation_id,
+        )
+    except InventoryDisabledError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=str(e)) from e
 

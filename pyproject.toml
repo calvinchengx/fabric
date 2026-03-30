@@ -28,7 +28,7 @@ build-backend = "hatchling.build"
 packages = ["src/fabric_provisioner"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/fabric_provisioner", "README.md", "LICENSE", "docs", "mkdocs.yml"]
+include = ["src/fabric_provisioner", "README.md", "LICENSE", "docs", "plan", "mkdocs.yml"]
 
 [tool.uv]
 constraint-dependencies = [

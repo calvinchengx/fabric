@@ -17,6 +17,13 @@ health:
 cli *args:
     uv run fabric-provision {{args}}
 
+# Tenant inventory (manifest v1); pass flags after recipe name, e.g. `just inventory-core -- --max-workspaces 1`
+inventory-core *args:
+    uv run fabric-provision inventory core {{args}}
+
+inventory-full *args:
+    uv run fabric-provision inventory full {{args}}
+
 # HTTP API (default http://127.0.0.1:8080 — override: `just api 3000`)
 api port="8080":
     uv run uvicorn fabric_provisioner.api:app --host 127.0.0.1 --port {{port}}

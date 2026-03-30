@@ -16,6 +16,7 @@ Design and operations for **Fabric administrators** and this app live in **[`doc
 | **[docs/permissions.md](docs/permissions.md)** | **Permissions & least privilege** — client credentials, Fabric/Entra requirements |
 | **[docs/architecture.md](docs/architecture.md)** | Entra vs Fabric, Fabric APIs, tenant prerequisites |
 | **[docs/governance.md](docs/governance.md)** | Roles, operations, security, checklists |
+| **[plan/README.md](plan/README.md)** | **Roadmap:** tenant manifest (Fabric Core + admin scanner), Option A — same repo |
 
 **On GitHub:** open the [`docs/`](docs/) folder in the repo. GitHub shows **`docs/README.md`** under the file list (same behavior as the root **`README.md`**). Click any `.md` file to read it with Markdown rendering.
 

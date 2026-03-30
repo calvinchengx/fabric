@@ -53,6 +53,7 @@ nav:
   - Home: README.md
   - Get started: get-started.md
   - Usage (examples): usage.md
+  - Tenant inventory (manifest v1): inventory.md
   - Architecture: architecture.md
   - Permissions & least privilege: permissions.md
   - Governance: governance.md
