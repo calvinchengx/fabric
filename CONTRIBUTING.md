@@ -51,6 +51,7 @@ Verify: **`just --version`**. Then from this repository’s root:
 | MkDocs live site | `just docs` |
 | MkDocs build / strict | `just docs-build`, `just docs-strict` |
 | Tests / Ruff | `just test`, `just lint` |
+| PyInstaller CLI bundle (maintainers) | `just package-cli` → **`dist/fabric-provision/`** |
 
 Recipes live in **`justfile`** at the repository root. They still invoke **`uv run`**, so you keep one toolchain (**uv** + **just**).
 
@@ -134,6 +135,26 @@ Typical release steps:
 3. Create and push the tag: **`git tag v0.2.0 && git push origin v0.2.0`**
 
 To publish to **PyPI** as well, add a **`PYPI_API_TOKEN`** repository secret and a **`uv publish`** step (or **Trusted Publishing**); this repo currently only attaches artifacts to GitHub Releases.
+
+### Standalone CLI (PyInstaller)
+
+**[just](https://github.com/casey/just)** is a **development** convenience (shortcuts around **`uv run`**). End users who should not manage Python, **uv**, or **just** should get a **frozen CLI** instead.
+
+This repo uses **[PyInstaller](https://github.com/pyinstaller/pyinstaller)** ([manual](https://pyinstaller.org/)) with **[`fabric-provision.spec`](fabric-provision.spec)** at the repo root. It produces a **one-folder** bundle under **`dist/fabric-provision/`** (executable **`fabric-provision`** plus dependencies). Zip that folder (or the whole **`dist/fabric-provision`** directory) and attach it to a release, or hand it to operators via your software channel.
+
+**Build** (maintainer machine, same OS you ship — PyInstaller is **not** a cross-compiler):
+
+```bash
+uv sync --group packaging   # or: uv sync --all-groups
+uv run pyinstaller -y fabric-provision.spec
+./dist/fabric-provision/fabric-provision --help
+```
+
+Or **`just package-cli`** (runs **`uv sync --group packaging`** then PyInstaller).
+
+**HTTP API:** the spec targets the **CLI** entry (`cli.py`). Running **`uvicorn fabric_provisioner.api:app`** in production is usually **container or `uv run`**; if you need a second frozen entry for **`uvicorn`**, add another spec or document **`python -m uvicorn`** inside a small wrapper script for PyInstaller.
+
+**macOS:** ad-hoc signing / notarization may be required for Gatekeeper; see [PyInstaller’s manual](https://pyinstaller.org/) (including macOS sections) and Apple’s distribution requirements for your org.
 
 ## Pull requests
 

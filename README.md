@@ -37,7 +37,8 @@ Set **`repo_url`** (and optional **`site_url`**) in [`mkdocs.yml`](mkdocs.yml) i
 
 - Python **3.11+**
 - [uv](https://docs.astral.sh/uv/)
-- [just](https://github.com/casey/just) (optional; short commands via **`justfile`** — see [CONTRIBUTING.md](CONTRIBUTING.md#short-commands-with-just))
+- [just](https://github.com/casey/just) (optional; **developer** shortcuts via **`justfile`** — not for end-user distribution; see [CONTRIBUTING.md](CONTRIBUTING.md#short-commands-with-just))
+- **No Python on the machine?** Maintainers can ship a **standalone CLI** built with [PyInstaller](https://github.com/pyinstaller/pyinstaller) — [CONTRIBUTING.md — Standalone CLI](CONTRIBUTING.md#standalone-cli-pyinstaller)
 - An **Entra app registration** with client secret (or adapt `auth.py` for certificates)
 - Tenant settings allowing the identity to **create workspaces** and **connections** and call **Fabric APIs** (see [service principals and Fabric](https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-developer)); required scopes/permissions depend on your auth model and admin policy (for example `Connection.ReadWrite.All` for connection role APIs)
 

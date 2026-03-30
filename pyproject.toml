@@ -41,6 +41,10 @@ dev = [
     "pytest-cov>=6",
     "ruff>=0.8",
 ]
+# Standalone CLI binary for end users (see CONTRIBUTING — PyInstaller). Not needed for library/pip installs.
+packaging = [
+    "pyinstaller>=6.10",
+]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",

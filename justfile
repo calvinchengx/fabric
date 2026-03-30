@@ -51,3 +51,9 @@ test:
 
 lint:
     uv run ruff check src tests
+
+# Standalone CLI bundle (PyInstaller). For maintainers — end users get the folder/zip, not just.
+# Requires: uv sync --group packaging (or --all-groups). Output: dist/fabric-provision/
+package-cli:
+    uv sync --group packaging
+    uv run pyinstaller -y fabric-provision.spec
