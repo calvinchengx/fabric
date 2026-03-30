@@ -4,7 +4,30 @@ Thin **Python** layer for **Microsoft Fabric**: create **workspaces** and [works
 
 **Policy** (who should have access) belongs in **Entra** (groups, access packages, lifecycle). This app **applies** approved outcomes — it does not replace IAM governance.
 
-See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (design & APIs) and **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** (operations & security).
+## Documentation
+
+Design and operations for **Fabric administrators** and this app live in **[`docs/`](docs/)**:
+
+| Document | Description |
+|----------|-------------|
+| **[docs/README.md](docs/README.md)** | Index and scope |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Entra vs Fabric, Fabric APIs, tenant prerequisites |
+| **[docs/GOVERNANCE.md](docs/GOVERNANCE.md)** | Roles, operations, security, checklists |
+
+**On GitHub:** open the [`docs/`](docs/) folder in the repo. GitHub shows **`docs/README.md`** under the file list (same behavior as the root `README.md`). Click any `.md` file to read it with Markdown rendering.
+
+**GitHub Pages (MkDocs site):** the repository includes [`mkdocs.yml`](mkdocs.yml) and [`.github/workflows/docs.yml`](.github/workflows/docs.yml). After you enable **Settings → Pages → Build and deployment → Source: GitHub Actions**, pushes to `main` (or `master`) that touch `docs/` or `mkdocs.yml` build and publish the site. The live URL is usually `https://<owner>.github.io/<repo>/` (also under **Settings → Pages**). Local preview:
+
+```bash
+uv sync --group docs
+uv run mkdocs serve
+```
+
+Set **`repo_url`** (and optional **`site_url`**) in [`mkdocs.yml`](mkdocs.yml) if your GitHub remote is not `calvinchengx/fabric`.
+
+**Optional:** In the repository **About** settings, set **Website** to the Pages URL or to `docs/README.md` on GitHub.
+
+**Note:** When the HTTP server is running, **`/docs`** is **Swagger UI** for this API—not the same as the **`docs/`** folder in git.
 
 ## Requirements
 

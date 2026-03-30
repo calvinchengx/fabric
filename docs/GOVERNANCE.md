@@ -1,8 +1,10 @@
-# Governance, operations, and security
+# Governance, operations, and security (Fabric)
 
-This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** Microsoft Fabric in conjunction with this repo. It complements [ARCHITECTURE.md](ARCHITECTURE.md) (technical split between Entra and the thin provisioner).
+This document states **how we expect** the platform team and workspace owners to **govern**, **operate**, and **secure** **Microsoft Fabric** in conjunction with this repo. It complements [ARCHITECTURE.md](ARCHITECTURE.md) (Entra vs Fabric split and Fabric APIs).
 
-**Other docs:** [Architecture](ARCHITECTURE.md) · [Project README](../README.md).
+**Scope:** **Fabric administrators** (named people who can change **Fabric admin portal** tenant settings) and **workspace owners** are the human control plane; this tool runs as a **provisioner service principal** with least privilege. We do **not** document other Microsoft cloud products here.
+
+**Other docs:** [Documentation index](README.md) · [Architecture](ARCHITECTURE.md) · [Project README](repository.md).
 
 ## Governance (who decides access)
 
@@ -14,7 +16,7 @@ This document states **how we expect** the platform team and workspace owners to
 
 ### Roles and accountability
 
-- **Fabric / tenant administrators** are **named individuals** with a documented role — not a shared “root” login for day-to-day work. Use **break-glass** accounts only for emergencies, with **strong monitoring**.
+- **Fabric administrators** (and related tenant roles your org assigns for Fabric / Power Platform) are **named individuals** with a documented role—not a shared “root” login for day-to-day work. They enable **tenant settings** (developer, capacity, security) per Microsoft Learn; they do not replace **Entra** lifecycle for group membership. Use **break-glass** accounts only for emergencies, with **strong monitoring**.
 - **Workspace admins** own **who** is in their workspace (often via **which groups** are assigned). They do not bypass Entra policy by sharing credentials.
 - **Automation** is performed by **service principals (SPNs)** that are **owned**, **named**, and **scoped** (one app registration per distinct automation identity in the tenant, each with its own credential material in a vault).
 
@@ -69,10 +71,10 @@ This document states **how we expect** the platform team and workspace owners to
 
 ### Logging and monitoring
 
-- Enable **stdout / JSONL** audit fields from this app (`AUDIT_JSONL_PATH`, structured lines) and forward them to your **SIEM**. Use **`fabric-provision audit-dump`** to stream the JSONL file to stdout for one-off exports or pipelines (see [README.md](../README.md#logs-and-extraction)).
+- Enable **stdout / JSONL** audit fields from this app (`AUDIT_JSONL_PATH`, structured lines) and forward them to your **SIEM**. Use **`fabric-provision audit-dump`** to stream the JSONL file to stdout for one-off exports or pipelines (see [Logs and extraction in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#logs-and-extraction)).
 - Record **correlation_id** and **ticket_id** on every provision so security and operations can trace **caller → change**.
-- **Tenant-wide Fabric / Power BI activity** (beyond this provisioner) comes from **Microsoft audit / Purview** and related exports — not from this package; ingest those separately into the same SIEM if you want combined reporting.
-- Monitor **Graph and Fabric sign-in / audit** exports per Microsoft documentation for your compliance regime.
+- **Tenant-wide Fabric / Power BI activity** beyond this provisioner (who used which workspace, admin operations, etc.) comes from **Microsoft’s** Fabric/Power BI and **Microsoft 365** audit and activity mechanisms—not from this package. Ingest those into your SIEM per your org’s standard; **Fabric administrators** usually coordinate which exports are enabled.
+- Monitor **Entra** sign-in and **Fabric/Power BI** audit exports per Microsoft documentation for your compliance regime.
 
 ### Incident response
 
@@ -87,6 +89,6 @@ This document states **how we expect** the platform team and workspace owners to
 | Admin access | **Named** admins; break-glass rare and monitored | **None** — assign Fabric/tenant admins in **Entra** and the **Fabric / Microsoft 365 admin** experiences; this package does not model human admin roles. |
 | Automation | **Dedicated SPNs**; secrets in **vault**; tenant settings **scoped** | **`fabric-provision health`** (or equivalent token check) to validate the **provisioner SPN** before jobs. **`create-workspace`** / **`POST /v1/workspaces`** run as that identity. **Tenant developer settings** (which SPNs may use Fabric) are configured in the **admin portal**, not here. |
 | This app | **Least privilege**; audit fields; no secrets in git | **Permissions** are Entra app roles / admin consent (outside the repo). Use **`--ticket-id`** and **`--correlation-id`** on `create-workspace` and `create-sql-connection` (or the matching API fields) so runs are traceable. |
-| Audit | Distinguish **author** vs **run-as / connection** identity | **Provisioner side:** stdout / JSONL audit lines; optional **`AUDIT_JSONL_PATH`**; **`fabric-provision audit-dump`** to stream a JSONL file. **Author vs run-as** for Fabric artifacts is explained in **Microsoft tenant audit / Purview** — not a command in this package. |
+| Audit | Distinguish **author** vs **run-as / connection** identity | **Provisioner side:** stdout / JSONL audit lines; optional **`AUDIT_JSONL_PATH`**; **`fabric-provision audit-dump`** to stream a JSONL file. **Author vs run-as** for Fabric content is interpreted using **Microsoft Fabric / Power BI** and **Entra** audit and activity logs—not a command in this package. |
 
-For technical API details and repo layout, see [ARCHITECTURE.md](ARCHITECTURE.md). For CLI discovery, run **`uv run fabric-provision --help`** (see [README.md](../README.md#cli)).
+For technical API details and repo layout, see [ARCHITECTURE.md](ARCHITECTURE.md). For CLI discovery, run **`uv run fabric-provision --help`** (see [CLI in the root README](https://github.com/calvinchengx/fabric/blob/main/README.md#cli)).

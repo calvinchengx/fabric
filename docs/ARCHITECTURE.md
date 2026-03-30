@@ -1,8 +1,10 @@
 # Fabric control plane — thin custom layer
 
-This repository documents how a **large organization** should split responsibility between **Microsoft Entra governance** and a **small, API-driven Python service**. The goal is **boring automation**: provisioning and hooks, not a full internal Fabric admin product.
+This repository documents how a **large organization** should split responsibility between **Microsoft Entra governance** and a **small, API-driven Python service** that automates **Fabric Core** provisioning. The goal is **boring automation**: workspaces, shareable SQL connections, and hooks—not a full internal Fabric admin product.
 
-**Other docs:** [Governance](GOVERNANCE.md) · [Project README](../README.md).
+**Scope:** **Fabric administrator** concerns that matter here are **tenant settings** (who may use Fabric APIs, who may create workspaces, optional **admin API** access for service principals), **Entra app permissions** for the provisioner, and **operational** discipline. This doc does **not** cover non-Fabric products or their REST APIs.
+
+**Other docs:** [Documentation index](README.md) · [Governance](GOVERNANCE.md) · [Project README](repository.md).
 
 ## Principles
 
@@ -69,10 +71,11 @@ flowchart LR
 - **Microsoft Graph** (`graph.microsoft.com/v1.0`): optional `GET /groups/{id}` and `GET /servicePrincipals/{id}` when `VALIDATE_GROUP_IDS_WITH_GRAPH=true` to fail fast on typos (requires appropriate app permissions).
 - **Legacy alternative:** [Power BI Groups APIs](https://learn.microsoft.com/en-us/rest/api/power-bi/groups/create-group) on `api.powerbi.com` can create workspaces and add members; the Python package standardizes on Fabric Core for alignment with Fabric-first tenants.
 
-Tenant prerequisites (examples — confirm with your admins):
+Tenant prerequisites (**Fabric administrators** configure these in the Fabric admin portal; confirm exact values with your org):
 
-- Fabric admin portal: **Service principals can use Fabric APIs** / **Service principals can create workspaces** (and related developer settings) scoped to your automation security groups where applicable. See [Fabric developer tenant settings](https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-developer).
-- The Entra app used by this service: permission to **create workspaces/connections** and **add role assignments** (typically via Fabric administrator grants and policy).
+- [Developer settings](https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-developer): e.g. **Service principals can use Fabric APIs**, **Service principals can create workspaces**—scoped to **security groups** where possible, not the whole tenant unless policy requires it.
+- If you use **Fabric / Power BI admin REST** paths from the same app: [Enable service principal authentication for admin APIs](https://learn.microsoft.com/en-us/fabric/admin/enable-service-principal-admin-apis) (security group + **Admin API settings** toggles; supported APIs are listed in Microsoft Learn).
+- The **provisioner** Entra app: delegated or application permissions your org approves for **create workspace**, **connections**, and **role assignments** (see each API’s “Required permissions” in Microsoft Learn); optional Graph permissions if `VALIDATE_GROUP_IDS_WITH_GRAPH=true`.
 
 ## Security notes
 
@@ -98,4 +101,4 @@ For **governance, day-to-day operations, and security expectations** (no shared 
 - **Integration:** `WebhookTicketCatalogPort` POSTs JSON when `INTEGRATION_WEBHOOK_URL` is set; replace with your own `TicketCatalogPort` for queue-based systems.
 - **Audit:** stdout JSON lines (`workspace.*`, `connection.sql.created`, `connection.role_assigned`, …); optional `AUDIT_JSONL_PATH`; CLI **`audit-dump`** streams that file to stdout (`README.md` — Logs and extraction).
 
-See [README.md](../README.md) for environment variables and examples.
+See [repository.md](repository.md) (links to the root README) for environment variables and examples.

@@ -28,13 +28,18 @@ build-backend = "hatchling.build"
 packages = ["src/fabric_provisioner"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/fabric_provisioner", "README.md", "LICENSE", "docs"]
+include = ["src/fabric_provisioner", "README.md", "LICENSE", "docs", "mkdocs.yml"]
 
 [dependency-groups]
 dev = [
     "pytest>=8",
     "pytest-cov>=6",
     "ruff>=0.8",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10",
 ]
 
 [tool.ruff]

@@ -1,0 +1,56 @@
+# MkDocs — https://www.mkdocs.org/
+# Local:  uv sync --group docs && uv run mkdocs serve
+# Deploy: GitHub Actions → Settings → Pages → Source: GitHub Actions
+
+site_name: fabric-provisioner
+site_description: Fabric workspace and shareable SQL connection provisioning (Fabric Core REST).
+# Set after Pages is enabled (project site URL):
+# site_url: https://<owner>.github.io/<repo>/
+
+repo_url: https://github.com/calvinchengx/fabric
+repo_name: fabric-provisioner
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+plugins:
+  - search
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: README.md
+  - Architecture: ARCHITECTURE.md
+  - Governance: GOVERNANCE.md
+  - Project README: repository.md
